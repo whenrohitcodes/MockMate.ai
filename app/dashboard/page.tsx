@@ -1,15 +1,91 @@
-import { auth } from '@clerk/nextjs/server';
-import { redirect } from 'next/navigation';
+"use client";
 
-export default async function Dashboard() {
-  const { userId } = await auth();
-  
-  if (!userId) {
-    redirect('/sign-in');
+import { useUser } from '@clerk/nextjs';
+import { useQuery } from 'convex/react';
+import { api } from '../../convex/_generated/api';
+import { redirect } from 'next/navigation';
+import { useEffect, useState } from 'react';
+
+export default function Dashboard() {
+  const { user, isLoaded } = useUser();
+  const [mounted, setMounted] = useState(false);
+
+  // Get user data from Convex
+  const convexUser = useQuery(api.users.getUserByClerkId, 
+    user?.id ? { clerkId: user.id } : "skip"
+  );
+
+  // Get user's mock interviews
+  const mockInterviews = useQuery(api.mockInterviews.getMockInterviewsByUser,
+    convexUser?._id ? { userId: convexUser._id } : "skip"
+  );
+
+  // Get user progress
+  const userProgress = useQuery(api.userProgress.getUserProgress,
+    convexUser?._id ? { userId: convexUser._id } : "skip"
+  );
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Handle loading and authentication
+  if (!mounted || !isLoaded) {
+    return (
+      <div className="dashboard-container flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
   }
 
+  if (!user) {
+    redirect('/sign-in');
+    return null;
+  }
+
+  // Calculate stats
+  const totalInterviews = mockInterviews?.length || 0;
+  const completedInterviews = mockInterviews?.filter(interview => interview.isCompleted).length || 0;
+  const averageRating = userProgress?.averageRating || 0;
+  const recentInterviews = mockInterviews?.slice(0, 3) || [];
+
   return (
-    <div className="min-h-screen pt-16 bg-gray-50">
+    <div className="dashboard-container">
+      <div className="dashboard-content">
+        {/* Welcome Section */}
+        <div className="dashboard-welcome">
+          <h1 className="dashboard-title">
+            Welcome back, {user.firstName || user.emailAddresses[0].emailAddress}!
+          </h1>
+          <p className="dashboard-subtitle">
+            Ready to practice your interview skills? Let's see how you're progressing.
+          </p>
+        </div>
+
+        {/* Start Journey Card */}
+        <div className="journey-card-container">
+          <div className="dashboard-card start-journey-card">
+            <div className="journey-card-content">
+              <div className="journey-card-icon">
+                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+              </div>
+              <div className="journey-card-text">
+                <h2 className="journey-card-title">Start Your Interview Journey</h2>
+                <p className="journey-card-description">
+                  Upload your resume and job description to get personalized interview questions and practice sessions.
+                </p>
+              </div>
+              <button 
+                onClick={() => window.location.href = '/dashboard/resume-upload'}
+                className="btn-primary journey-card-button">
+                Get Started
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

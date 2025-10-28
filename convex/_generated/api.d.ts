@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as interviewSessions from "../interviewSessions.js";
 import type * as mockInterviews from "../mockInterviews.js";
 import type * as userAnswers from "../userAnswers.js";
 import type * as userProgress from "../userProgress.js";
@@ -28,6 +29,7 @@ import type {
  * ```
  */
 declare const fullApi: ApiFromModules<{
+  interviewSessions: typeof interviewSessions;
   mockInterviews: typeof mockInterviews;
   userAnswers: typeof userAnswers;
   userProgress: typeof userProgress;

@@ -44,4 +44,35 @@ export default defineSchema({
     strengths: v.array(v.string()),
     lastUpdated: v.number(),
   }).index("by_user", ["userId"]),
+
+  // Interview sessions with file uploads
+  interviewSessions: defineTable({
+    userId: v.id("users"),
+    resumeFileUrl: v.optional(v.string()),
+    resumeContent: v.optional(v.string()),
+    jobDescriptionFileUrl: v.optional(v.string()),
+    jobDescriptionContent: v.optional(v.string()),
+    status: v.string(), // "uploading", "processing", "ready", "in_progress", "completed"
+    generatedQuestions: v.optional(v.array(v.string())),
+    vapiSessionId: v.optional(v.string()),
+    overallScore: v.optional(v.number()),
+    feedbackData: v.optional(v.string()),
+    createdAt: v.number(),
+    completedAt: v.optional(v.number()),
+  }).index("by_user", ["userId"])
+    .index("by_status", ["status"]),
+
+  // Question responses for detailed tracking
+  questionResponses: defineTable({
+    sessionId: v.id("interviewSessions"),
+    questionNumber: v.number(),
+    question: v.string(),
+    response: v.string(),
+    audioUrl: v.optional(v.string()),
+    duration: v.optional(v.number()),
+    confidenceScore: v.optional(v.number()),
+    relevanceScore: v.optional(v.number()),
+    feedback: v.optional(v.string()),
+    createdAt: v.number(),
+  }).index("by_session", ["sessionId"]),
 });
