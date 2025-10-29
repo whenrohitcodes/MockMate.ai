@@ -52,11 +52,40 @@ export default defineSchema({
     resumeContent: v.optional(v.string()),
     jobDescriptionFileUrl: v.optional(v.string()),
     jobDescriptionContent: v.optional(v.string()),
-    status: v.string(), // "uploading", "processing", "ready", "in_progress", "completed"
-    generatedQuestions: v.optional(v.array(v.string())),
+    
+    // ATS Report Data
+    atsScore: v.optional(v.number()),
+    atsReport: v.optional(v.string()), // JSON string with detailed ATS analysis
+    parsedResumeData: v.optional(v.string()), // JSON string with structured resume data
+    
+    // Interview Configuration  
+    interviewDuration: v.optional(v.number()), // in minutes
+    aiModel: v.optional(v.string()), // "chatgpt", "gemini", "deepseek"
+    interviewType: v.optional(v.string()), // "technical", "behavioral", "mixed", "hr"
+    difficulty: v.optional(v.string()), // "beginner", "intermediate", "advanced"
+    
+    status: v.string(), // "uploading", "ats_processing", "ats_ready", "configured", "interview_ready", "in_progress", "completed"
+    generatedQuestions: v.optional(v.array(v.object({
+      id: v.number(),
+      question: v.string(),
+      type: v.string(),
+      category: v.string(),
+      difficulty: v.string(),
+      expectedDuration: v.string(),
+      followUpSuggestions: v.array(v.string()),
+    }))),
     vapiSessionId: v.optional(v.string()),
+    vapiCallId: v.optional(v.string()),
+    
+    // Results and Feedback
     overallScore: v.optional(v.number()),
-    feedbackData: v.optional(v.string()),
+    technicalScore: v.optional(v.number()),
+    communicationScore: v.optional(v.number()),
+    confidenceScore: v.optional(v.number()),
+    feedbackData: v.optional(v.string()), // JSON string with detailed feedback
+    improvementAreas: v.optional(v.array(v.string())),
+    strengths: v.optional(v.array(v.string())),
+    
     createdAt: v.number(),
     completedAt: v.optional(v.number()),
   }).index("by_user", ["userId"])

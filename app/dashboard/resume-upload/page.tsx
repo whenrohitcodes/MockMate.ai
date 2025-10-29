@@ -74,18 +74,52 @@ export default function ResumeUpload() {
       setResumeData(prev => ({ ...prev, file, uploading: true }));
       
       try {
+        console.log('Processing file:', file.name, file.type, file.size);
+        
+        // Upload to ImageKit first
+        console.log('Uploading to ImageKit...');
         const uploadedUrl = await uploadFile(file, '/resumes');
+        console.log('Upload successful:', uploadedUrl);
+        
+        // For now, skip automatic text extraction and ask user to paste content
         setResumeData(prev => ({ 
           ...prev, 
           uploading: false, 
-          uploadedUrl 
+          uploadedUrl,
+          text: '' // User will need to paste manually
         }));
+        
+        // Inform user they need to paste content manually
+        alert(
+          `File uploaded successfully!\n\n` +
+          `Please copy and paste your resume content in the text area below for the ATS analysis to work properly.`
+        );
+        
+        console.log('Resume upload completed successfully');
       } catch (error) {
         console.error('Resume upload failed:', error);
         setResumeData(prev => ({ ...prev, uploading: false }));
-        alert('Failed to upload resume. Please try again.');
+        alert(`Failed to upload resume: ${error instanceof Error ? error.message : 'Unknown error'}`);
       }
     }
+  };
+
+  // Function to extract text from file
+  const extractTextFromFile = async (file: File): Promise<string> => {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await fetch('/api/extract-text', {
+      method: 'POST',
+      body: formData,
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to extract text from file');
+    }
+
+    const result = await response.json();
+    return result.text || '';
   };
 
   const handleResumeTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {

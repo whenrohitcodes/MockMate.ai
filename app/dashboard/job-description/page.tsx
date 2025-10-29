@@ -102,18 +102,51 @@ export default function JobDescriptionUpload() {
       setJobDescriptionData(prev => ({ ...prev, file, uploading: true }));
       
       try {
+        console.log('Processing job description file:', file.name, file.type, file.size);
+        
+        // Upload to ImageKit
+        console.log('Uploading to ImageKit...');
         const uploadedUrl = await uploadFile(file, '/job-descriptions');
+        console.log('Upload successful:', uploadedUrl);
+        
         setJobDescriptionData(prev => ({ 
           ...prev, 
           uploading: false, 
-          uploadedUrl 
+          uploadedUrl,
+          text: '' // User will need to paste manually
         }));
+        
+        // Inform user they need to paste content manually
+        alert(
+          `File uploaded successfully!\n\n` +
+          `Please copy and paste your job description content in the text area below for the ATS analysis to work properly.`
+        );
+        
+        console.log('Job description upload completed successfully');
       } catch (error) {
         console.error('Job description upload failed:', error);
         setJobDescriptionData(prev => ({ ...prev, uploading: false }));
-        alert('Failed to upload job description. Please try again.');
+        alert(`Failed to upload job description: ${error instanceof Error ? error.message : 'Unknown error'}`);
       }
     }
+  };
+
+  // Function to extract text from file
+  const extractTextFromFile = async (file: File): Promise<string> => {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await fetch('/api/extract-text', {
+      method: 'POST',
+      body: formData,
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to extract text from file');
+    }
+
+    const result = await response.json();
+    return result.text || '';
   };
 
   const handleJobDescriptionTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -129,25 +162,30 @@ export default function JobDescriptionUpload() {
     setIsLoading(true);
     
     try {
+      const resumeContent = resumeData.text || '';
+      const jobDescriptionContent = jobDescriptionData.text || '';
+
+      if (!resumeContent.trim() || !jobDescriptionContent.trim()) {
+        alert('Please provide both resume and job description content.');
+        setIsLoading(false);
+        return;
+      }
+
       // Create interview session in Convex
       const sessionId = await createSession({
         userId: convexUser._id,
         resumeFileUrl: resumeData.uploadedUrl,
-        resumeContent: resumeData.text,
+        resumeContent: resumeContent,
         jobDescriptionFileUrl: jobDescriptionData.uploadedUrl,
-        jobDescriptionContent: jobDescriptionData.text,
+        jobDescriptionContent: jobDescriptionContent,
+        status: 'ats_processing'
       });
 
       // Clean up sessionStorage
       sessionStorage.removeItem('resumeData');
 
-      // Simulate processing time for now
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // In the future, this will trigger n8n workflow for question generation
-      // await fetch('/api/trigger-n8n', { ... })
-      
-      router.push(`/dashboard/interview/${sessionId}`);
+      // Redirect to ATS report generation
+      router.push(`/dashboard/ats-report/${sessionId}`);
     } catch (error) {
       console.error('Session creation failed:', error);
       alert('Failed to create interview session. Please try again.');

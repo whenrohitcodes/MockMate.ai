@@ -1259,6 +1259,508 @@ body {
   @apply text-green-700 font-medium;
 }
 
+/* ATS Report Styles */
+.ats-report-card {
+  @apply max-w-6xl;
+}
+
+.ats-report-header {
+  @apply text-center mb-8;
+}
+
+.ats-report-title {
+  @apply text-3xl font-bold text-gray-900 mb-2;
+}
+
+.ats-report-subtitle {
+  @apply text-lg text-gray-600;
+}
+
+.ats-overall-score {
+  @apply flex items-center justify-center gap-8 mb-8 p-6 bg-blue-50 rounded-xl;
+}
+
+.score-circle {
+  @apply text-center;
+}
+
+.score-value {
+  @apply text-4xl font-bold block;
+}
+
+.score-label {
+  @apply text-sm text-gray-600 mt-1;
+}
+
+.match-percentage {
+  @apply text-center;
+}
+
+.match-label {
+  @apply text-sm text-gray-600 mb-1;
+}
+
+.match-value {
+  @apply text-2xl font-bold;
+}
+
+.compatibility-badge {
+  @apply flex items-center;
+}
+
+.compatibility-level {
+  @apply px-4 py-2 rounded-full text-sm font-medium;
+}
+
+.compatibility-level.high {
+  @apply bg-green-100 text-green-800;
+}
+
+.compatibility-level.medium {
+  @apply bg-yellow-100 text-yellow-800;
+}
+
+.compatibility-level.low {
+  @apply bg-red-100 text-red-800;
+}
+
+.ats-summary {
+  @apply mb-8;
+}
+
+.summary-text {
+  @apply text-gray-700 leading-relaxed;
+}
+
+.ats-sections {
+  @apply mb-8;
+}
+
+.sections-grid {
+  @apply grid grid-cols-1 md:grid-cols-2 gap-4;
+}
+
+.section-card {
+  @apply p-4 border border-gray-200 rounded-xl;
+}
+
+.section-header {
+  @apply flex justify-between items-center mb-3;
+}
+
+.section-name {
+  @apply font-semibold text-gray-900 capitalize;
+}
+
+.section-score {
+  @apply px-3 py-1 rounded-full text-sm font-medium;
+}
+
+.section-feedback {
+  @apply text-gray-600 text-sm mb-3;
+}
+
+.section-suggestions {
+  @apply text-sm;
+}
+
+.suggestions-list {
+  @apply list-disc list-inside ml-2 mt-1;
+}
+
+.suggestions-list li {
+  @apply text-gray-600 text-xs;
+}
+
+.ats-keywords {
+  @apply grid grid-cols-1 md:grid-cols-2 gap-6 mb-8;
+}
+
+.keywords-section {
+  @apply space-y-3;
+}
+
+.keywords-title {
+  @apply font-semibold text-gray-900;
+}
+
+.keywords-list {
+  @apply flex flex-wrap gap-2;
+}
+
+.keyword-tag {
+  @apply px-3 py-1 rounded-full text-sm;
+}
+
+.keyword-tag.found {
+  @apply bg-green-100 text-green-800;
+}
+
+.keyword-tag.missing {
+  @apply bg-red-100 text-red-800;
+}
+
+.ats-insights {
+  @apply grid grid-cols-1 md:grid-cols-2 gap-6 mb-8;
+}
+
+.insights-section {
+  @apply space-y-3;
+}
+
+.insights-title {
+  @apply font-semibold text-gray-900;
+}
+
+.insights-list {
+  @apply space-y-2;
+}
+
+.insights-list.strengths li {
+  @apply text-green-700 text-sm flex items-start;
+}
+
+.insights-list.strengths li::before {
+  content: "✓";
+  @apply text-green-500 mr-2 font-bold;
+}
+
+.insights-list.improvements li {
+  @apply text-red-700 text-sm flex items-start;
+}
+
+.insights-list.improvements li::before {
+  content: "•";
+  @apply text-red-500 mr-2 font-bold;
+}
+
+.ats-recommendations {
+  @apply mb-8;
+}
+
+.recommendations-list {
+  @apply space-y-2;
+}
+
+.recommendations-list li {
+  @apply text-gray-700 text-sm flex items-start;
+}
+
+.recommendations-list li::before {
+  content: "→";
+  @apply text-blue-500 mr-2 font-bold;
+}
+
+.ats-actions {
+  @apply flex justify-between gap-4;
+}
+
+.ats-processing {
+  @apply text-center py-12;
+}
+
+/* Interview Configuration Styles */
+.interview-config-card {
+  @apply max-w-6xl;
+}
+
+.config-header {
+  @apply text-center mb-8;
+}
+
+.config-title {
+  @apply text-3xl font-bold text-gray-900 mb-2;
+}
+
+.config-subtitle {
+  @apply text-lg text-gray-600;
+}
+
+.ats-summary-banner {
+  @apply flex justify-between items-center p-4 bg-blue-50 border border-blue-200 rounded-xl mb-8;
+}
+
+.ats-score-display {
+  @apply flex items-center gap-3;
+}
+
+.ats-label {
+  @apply text-sm font-medium text-blue-700;
+}
+
+.ats-score {
+  @apply text-lg font-bold;
+}
+
+.ats-score.high {
+  @apply text-green-600;
+}
+
+.ats-score.medium {
+  @apply text-yellow-600;
+}
+
+.ats-score.low {
+  @apply text-red-600;
+}
+
+.view-report-btn {
+  @apply px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm;
+}
+
+.config-content {
+  @apply space-y-8;
+}
+
+.config-section {
+  @apply space-y-4;
+}
+
+.section-title {
+  @apply text-xl font-semibold text-gray-900 mb-4;
+}
+
+.model-grid {
+  @apply grid grid-cols-1 md:grid-cols-3 gap-4;
+}
+
+.model-card {
+  @apply p-6 border-2 border-gray-200 rounded-xl cursor-pointer transition-all hover:border-blue-300;
+}
+
+.model-card.selected {
+  @apply border-blue-500 bg-blue-50;
+}
+
+.model-icon {
+  @apply text-3xl mb-3;
+}
+
+.model-name {
+  @apply font-semibold text-gray-900 mb-2;
+}
+
+.model-description {
+  @apply text-sm text-gray-600 mb-3;
+}
+
+.model-strengths {
+  @apply flex flex-wrap gap-1;
+}
+
+.strength-tag {
+  @apply px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded;
+}
+
+.type-grid {
+  @apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4;
+}
+
+.type-card {
+  @apply p-6 border-2 border-gray-200 rounded-xl cursor-pointer transition-all hover:border-blue-300 text-center;
+}
+
+.type-card.selected {
+  @apply border-blue-500 bg-blue-50;
+}
+
+.type-icon {
+  @apply text-3xl mb-3;
+}
+
+.type-name {
+  @apply font-semibold text-gray-900 mb-2;
+}
+
+.type-description {
+  @apply text-sm text-gray-600;
+}
+
+.difficulty-options {
+  @apply space-y-3;
+}
+
+.difficulty-option {
+  @apply p-4 border-2 border-gray-200 rounded-xl cursor-pointer transition-all hover:border-blue-300 flex items-center gap-4;
+}
+
+.difficulty-option.selected {
+  @apply border-blue-500 bg-blue-50;
+}
+
+.difficulty-badge {
+  @apply px-3 py-1 rounded-full text-sm font-medium whitespace-nowrap;
+}
+
+.difficulty-description {
+  @apply text-sm text-gray-600;
+}
+
+.duration-options {
+  @apply flex gap-3 flex-wrap;
+}
+
+.duration-btn {
+  @apply px-6 py-3 border-2 border-gray-200 rounded-xl cursor-pointer transition-all hover:border-blue-300;
+}
+
+.duration-btn.selected {
+  @apply border-blue-500 bg-blue-50 text-blue-700 font-medium;
+}
+
+.config-summary {
+  @apply p-6 bg-gray-50 rounded-xl;
+}
+
+.summary-grid {
+  @apply grid grid-cols-2 md:grid-cols-4 gap-4;
+}
+
+.summary-item {
+  @apply space-y-1;
+}
+
+.summary-label {
+  @apply text-sm font-medium text-gray-600;
+}
+
+.summary-value {
+  @apply text-sm font-semibold text-gray-900;
+}
+
+.config-actions {
+  @apply flex justify-between gap-4 pt-6 border-t border-gray-200;
+}
+
+/* Interview Setup Styles */
+.interview-setup-card {
+  @apply max-w-4xl;
+}
+
+.setup-header {
+  @apply text-center mb-8;
+}
+
+.setup-title {
+  @apply text-3xl font-bold text-gray-900 mb-2;
+}
+
+.setup-subtitle {
+  @apply text-lg text-gray-600;
+}
+
+.config-summary-display {
+  @apply mb-8 p-6 bg-gray-50 rounded-xl;
+}
+
+.config-summary-title {
+  @apply text-lg font-semibold text-gray-900 mb-4;
+}
+
+.config-summary-grid {
+  @apply grid grid-cols-2 md:grid-cols-4 gap-4;
+}
+
+.config-item {
+  @apply space-y-1;
+}
+
+.config-label {
+  @apply text-sm font-medium text-gray-600;
+}
+
+.config-value {
+  @apply text-sm font-semibold text-gray-900 capitalize;
+}
+
+.setup-progress {
+  @apply mb-8;
+}
+
+.progress-container {
+  @apply flex items-center gap-6 mb-6 p-6 bg-blue-50 rounded-xl;
+}
+
+.progress-spinner {
+  @apply shrink-0;
+}
+
+.progress-content {
+  @apply flex-1;
+}
+
+.progress-title {
+  @apply text-xl font-semibold text-gray-900 mb-2;
+}
+
+.progress-step {
+  @apply text-gray-600;
+}
+
+.setup-steps {
+  @apply space-y-4;
+}
+
+.setup-step {
+  @apply flex items-center gap-3 p-4 border border-gray-200 rounded-lg;
+}
+
+.setup-step.active {
+  @apply border-blue-300 bg-blue-50;
+}
+
+.setup-step.completed {
+  @apply border-green-300 bg-green-50;
+}
+
+.step-icon {
+  @apply w-8 h-8 rounded-full border-2 border-gray-300 flex items-center justify-center text-sm font-medium;
+}
+
+.setup-step.active .step-icon {
+  @apply border-blue-500 bg-blue-500 text-white;
+}
+
+.setup-step.completed .step-icon {
+  @apply border-green-500 bg-green-500 text-white;
+}
+
+.step-text {
+  @apply font-medium text-gray-900;
+}
+
+.interview-preview {
+  @apply mb-8;
+}
+
+.preview-title {
+  @apply text-xl font-semibold text-gray-900 mb-6;
+}
+
+.preview-grid {
+  @apply grid grid-cols-1 md:grid-cols-2 gap-6;
+}
+
+.preview-item {
+  @apply p-6 border border-gray-200 rounded-xl text-center;
+}
+
+.preview-icon {
+  @apply text-3xl mb-3;
+}
+
+.preview-item-title {
+  @apply font-semibold text-gray-900 mb-2;
+}
+
+.preview-item-description {
+  @apply text-sm text-gray-600;
+}
+
+.setup-actions {
+  @apply flex justify-between gap-4 pt-6 border-t border-gray-200;
+}
+
 /* Journey Page Styles */
 .journey-container {
   max-width: 56rem;
@@ -1601,4 +2103,334 @@ body {
   border-top: 3px solid rgb(37 99 235);
   border-radius: 50%;
   animation: spin 1s linear infinite;
+}
+
+/* Voice Interview Styles */
+.conversation-container {
+  max-width: 4xl;
+  margin: 0 auto;
+  padding: 1rem;
+}
+
+.conversation-history {
+  max-height: 400px;
+  overflow-y: auto;
+  border: 1px solid rgb(229 231 235);
+  border-radius: 0.75rem;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+  background: rgb(249 250 251);
+}
+
+.conversation-entry {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  align-items: flex-start;
+}
+
+.conversation-entry.ai {
+  flex-direction: row;
+}
+
+.conversation-entry.user {
+  flex-direction: row-reverse;
+}
+
+.speaker-avatar {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  background: rgb(243 244 246);
+  flex-shrink: 0;
+}
+
+.conversation-entry.ai .speaker-avatar {
+  background: rgb(219 234 254);
+}
+
+.conversation-entry.user .speaker-avatar {
+  background: rgb(220 252 231);
+}
+
+.message-content {
+  flex: 1;
+  max-width: 70%;
+}
+
+.conversation-entry.user .message-content {
+  text-align: right;
+}
+
+.speaker-name {
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: rgb(75 85 99);
+  margin-bottom: 0.25rem;
+}
+
+.message-text {
+  background: white;
+  padding: 0.75rem;
+  border-radius: 0.75rem;
+  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
+  margin-bottom: 0.25rem;
+}
+
+.conversation-entry.ai .message-text {
+  border-bottom-left-radius: 0.25rem;
+}
+
+.conversation-entry.user .message-text {
+  border-bottom-right-radius: 0.25rem;
+  background: rgb(37 99 235);
+  color: white;
+}
+
+.timestamp {
+  font-size: 0.75rem;
+  color: rgb(156 163 175);
+}
+
+.speaking-indicator {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-style: italic;
+}
+
+.dots {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.dots span {
+  width: 0.25rem;
+  height: 0.25rem;
+  background: rgb(156 163 175);
+  border-radius: 50%;
+  animation: dot-pulse 1.4s infinite ease-in-out;
+}
+
+.dots span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.dots span:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes dot-pulse {
+  0%, 80%, 100% {
+    transform: scale(0);
+    opacity: 0.5;
+  }
+  40% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.voice-controls {
+  background: white;
+  border-radius: 0.75rem;
+  padding: 1.5rem;
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+}
+
+.current-question-display {
+  background: rgb(243 244 246);
+  padding: 1rem;
+  border-radius: 0.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.question-label {
+  font-weight: 600;
+  color: rgb(75 85 99);
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+.question-text {
+  color: rgb(17 24 39);
+  font-size: 1.1rem;
+}
+
+.voice-interface {
+  text-align: center;
+}
+
+.voice-status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  border-radius: 0.75rem;
+  font-weight: 500;
+}
+
+.voice-status.ready {
+  background: rgb(243 244 246);
+  color: rgb(75 85 99);
+}
+
+.voice-status.listening {
+  background: rgb(220 252 231);
+  color: rgb(21 128 61);
+}
+
+.voice-status.ai-speaking {
+  background: rgb(219 234 254);
+  color: rgb(29 78 216);
+}
+
+.pulse-animation {
+  width: 1rem;
+  height: 1rem;
+  background: rgb(34 197 94);
+  border-radius: 50%;
+  animation: pulse-scale 1s infinite;
+}
+
+.speaking-animation {
+  width: 1rem;
+  height: 1rem;
+  background: rgb(59 130 246);
+  border-radius: 50%;
+  animation: speaking-bounce 0.6s infinite alternate;
+}
+
+@keyframes pulse-scale {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 0.7;
+  }
+}
+
+@keyframes speaking-bounce {
+  0% {
+    transform: translateY(0);
+  }
+  100% {
+    transform: translateY(-0.25rem);
+  }
+}
+
+.voice-controls-buttons {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  margin-bottom: 1rem;
+}
+
+.btn-voice {
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.5rem;
+  border: none;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-start-listening {
+  background: rgb(34 197 94);
+  color: white;
+}
+
+.btn-start-listening:hover:not(:disabled) {
+  background: rgb(22 163 74);
+}
+
+.btn-stop-listening {
+  background: rgb(239 68 68);
+  color: white;
+}
+
+.btn-stop-listening:hover:not(:disabled) {
+  background: rgb(220 38 38);
+}
+
+.btn-stop-ai {
+  background: rgb(156 163 175);
+  color: white;
+}
+
+.btn-stop-ai:hover:not(:disabled) {
+  background: rgb(107 114 128);
+}
+
+.btn-voice:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.current-response {
+  background: rgb(249 250 251);
+  border: 1px solid rgb(229 231 235);
+  border-radius: 0.5rem;
+  padding: 1rem;
+  text-align: left;
+  margin-top: 1rem;
+}
+
+.current-response p {
+  margin: 0.5rem 0 0 0;
+  color: rgb(75 85 99);
+  font-style: italic;
+}
+
+/* Interview Navigation Updates */
+.interview-navigation {
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid rgb(229 231 235);
+}
+
+/* Text Input Fallback */
+.text-input-fallback {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  width: 100%;
+}
+
+.response-textarea {
+  min-height: 100px;
+  padding: 1rem;
+  border: 2px solid rgb(229 231 235);
+  border-radius: 0.5rem;
+  font-family: inherit;
+  font-size: 1rem;
+  resize: vertical;
+  transition: border-color 0.2s;
+}
+
+.response-textarea:focus {
+  outline: none;
+  border-color: rgb(59 130 246);
+}
+
+.response-textarea:disabled {
+  background-color: rgb(243 244 246);
+  cursor: not-allowed;
+}
+
+.btn-submit-text {
+  background: rgb(59 130 246);
+  color: white;
+}
+
+.btn-submit-text:hover:not(:disabled) {
+  background: rgb(37 99 235);
 }
