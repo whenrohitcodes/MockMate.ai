@@ -58,7 +58,7 @@ export default function Dashboard() {
             Welcome back, {user.firstName || user.emailAddresses[0].emailAddress}!
           </h1>
           <p className="dashboard-subtitle">
-            Ready to practice your interview skills? Let's see how you're progressing.
+            Optimize your resume for job applications with our ATS analysis tool.
           </p>
         </div>
 
@@ -68,13 +68,13 @@ export default function Dashboard() {
             <div className="journey-card-content">
               <div className="journey-card-icon">
                 <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
               </div>
               <div className="journey-card-text">
-                <h2 className="journey-card-title">Start Your Interview Journey</h2>
+                <h2 className="journey-card-title">Analyze Your Resume</h2>
                 <p className="journey-card-description">
-                  Upload your resume and job description to get personalized interview questions and practice sessions.
+                  Upload your resume and job description to get a detailed ATS compatibility report and optimization suggestions.
                 </p>
               </div>
               <button 

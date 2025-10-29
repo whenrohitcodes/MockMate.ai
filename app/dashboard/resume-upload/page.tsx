@@ -153,7 +153,7 @@ export default function ResumeUpload() {
           <div className="journey-header">
             <h1 className="journey-title">Upload Your Resume</h1>
             <p className="journey-description">
-              Upload your resume file or paste your resume content to get started with your interview preparation
+              Upload your resume file or paste your resume content to get an ATS compatibility analysis
             </p>
           </div>
 
@@ -177,7 +177,7 @@ export default function ResumeUpload() {
               <div className="step-circle">
                 <span className="step-number">3</span>
               </div>
-              <span className="step-label">Generate Questions</span>
+              <span className="step-label">ATS Report</span>
             </div>
           </div>
 

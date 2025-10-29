@@ -214,7 +214,7 @@ export default function JobDescriptionUpload() {
           <div className="journey-header">
             <h1 className="journey-title">Job Description</h1>
             <p className="journey-description">
-              Upload the job description file or paste the job posting content to generate relevant interview questions
+              Upload the job description file or paste the job posting content to analyze your resume compatibility
             </p>
           </div>
 
@@ -238,7 +238,7 @@ export default function JobDescriptionUpload() {
               <div className="step-circle">
                 <span className="step-number">3</span>
               </div>
-              <span className="step-label">Generate Questions</span>
+              <span className="step-label">ATS Report</span>
             </div>
           </div>
 
@@ -348,7 +348,7 @@ export default function JobDescriptionUpload() {
               disabled={!canProceed || jobDescriptionData.uploading || isLoading}
               className="btn-primary"
             >
-              {isLoading ? 'Creating Interview...' : 'Generate Questions'}
+              {isLoading ? 'Generating ATS Report...' : 'Generate ATS Report'}
             </button>
           </div>
         </div>
