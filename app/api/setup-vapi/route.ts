@@ -73,14 +73,14 @@ async function createVAPIAssistant({
 }) {
   console.log('createVAPIAssistant called with config:', config);
   
-  const vapiApiKey = process.env.VAPI_API_KEY;
+  const vapiPrivateKey = process.env.VAPI_PRIVATE_KEY;
   
-  if (!vapiApiKey) {
-    console.error('VAPI API key missing');
-    throw new Error('VAPI API key not configured');
+  if (!vapiPrivateKey) {
+    console.error('VAPI private key missing');
+    throw new Error('VAPI private key not configured');
   }
 
-  console.log('VAPI API key present, length:', vapiApiKey.length);
+  console.log('VAPI private key present, length:', vapiPrivateKey.length);
   
   // Prepare the interview script for the AI assistant
   console.log('Generating interview script...');
@@ -89,17 +89,15 @@ async function createVAPIAssistant({
   const assistantPayload = {
     name: `Interview Assistant - Session ${sessionId}`,
     model: {
-      provider: getVAPIModelProvider(config.aiModel),
-      model: getVAPIModelName(config.aiModel),
+      provider: "openai",
+      model: "gpt-4o-mini",
       temperature: 0.7,
       maxTokens: 500,
-      systemMessage: interviewScript
+      systemPrompt: interviewScript
     },
     voice: {
       provider: "11labs",
-      voiceId: "sarah", // Professional female voice
-      stability: 0.5,
-      similarityBoost: 0.8
+      voiceId: "burt"
     },
     firstMessage: getWelcomeMessage(config),
     endCallMessage: "Thank you for completing the interview. You'll receive detailed feedback shortly. Have a great day!",
@@ -114,8 +112,21 @@ async function createVAPIAssistant({
     maxDurationSeconds: (config.duration + 5) * 60, // Add 5 minutes buffer
     silenceTimeoutSeconds: 30,
     responseDelaySeconds: 1,
-    llmRequestDelaySeconds: 0.1,
     numWordsToInterruptAssistant: 2,
+    clientMessages: [
+      "transcript",
+      "hang",
+      "function-call",
+      "speech-update",
+      "metadata",
+      "conversation-update"
+    ],
+    serverMessages: [
+      "end-of-call-report",
+      "status-update",
+      "hang",
+      "function-call"
+    ],
     metadata: {
       sessionId,
       interviewType: config.type,
@@ -126,7 +137,7 @@ async function createVAPIAssistant({
 
   console.log('Assistant payload prepared:', {
     name: assistantPayload.name,
-    model: assistantPayload.model,
+    model: assistantPayload.model.model,
     voice: assistantPayload.voice,
     maxDurationSeconds: assistantPayload.maxDurationSeconds
   });
@@ -136,7 +147,7 @@ async function createVAPIAssistant({
   const response = await fetch('https://api.vapi.ai/assistant', {
     method: 'POST',
     headers: {
-      'Authorization': `Bearer ${vapiApiKey}`,
+      'Authorization': `Bearer ${vapiPrivateKey}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify(assistantPayload),
@@ -145,10 +156,17 @@ async function createVAPIAssistant({
   console.log('VAPI API response status:', response.status);
 
   if (!response.ok) {
-    const errorText = await response.text();
-    console.error('VAPI API Error Response:', errorText);
+    let errorText;
+    try {
+      const errorJson = await response.json();
+      errorText = JSON.stringify(errorJson, null, 2);
+      console.error('VAPI API Error Response (JSON):', errorJson);
+    } catch (e) {
+      errorText = await response.text();
+      console.error('VAPI API Error Response (Text):', errorText);
+    }
     console.error('Request payload was:', JSON.stringify(assistantPayload, null, 2));
-    throw new Error(`VAPI API error: ${response.status} ${errorText}`);
+    throw new Error(`VAPI API error: ${response.status} - ${errorText}`);
   }
 
   const assistant = await response.json();
