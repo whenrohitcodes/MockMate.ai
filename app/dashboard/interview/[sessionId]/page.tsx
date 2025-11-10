@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, use, useCallback } from 'react';
+import { useState, useEffect, use, useCallback, useRef } from 'react';
 import { useUser } from '@clerk/nextjs';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../../../convex/_generated/api';
@@ -12,6 +12,7 @@ interface ConversationMessage {
   role: 'assistant' | 'user' | 'system';
   message: string;
   timestamp: Date;
+  isComplete: boolean;
 }
 
 export default function InterviewPage({ params }: { params: Promise<{ sessionId: string }> }) {
@@ -38,10 +39,20 @@ export default function InterviewPage({ params }: { params: Promise<{ sessionId:
   const [conversationHistory, setConversationHistory] = useState<ConversationMessage[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [assistantIsSpeaking, setAssistantIsSpeaking] = useState(false);
+  const [userIsSpeaking, setUserIsSpeaking] = useState(false);
   const [callDuration, setCallDuration] = useState(0);
+  const [currentBuffer, setCurrentBuffer] = useState<{role: 'assistant' | 'user', text: string} | null>(null);
+  const transcriptRef = useRef<HTMLDivElement>(null);
 
   // Get questions
   const questions = session?.generatedQuestions || [];
+
+  // Auto-scroll to bottom when new messages arrive
+  useEffect(() => {
+    if (transcriptRef.current) {
+      transcriptRef.current.scrollTop = transcriptRef.current.scrollHeight;
+    }
+  }, [conversationHistory]);
 
   // Handle call end
   const handleCallEnd = useCallback(async () => {
@@ -53,10 +64,19 @@ export default function InterviewPage({ params }: { params: Promise<{ sessionId:
           completedAt: Date.now()
         }
       });
+      
+      // Redirect to dashboard after a short delay
+      setTimeout(() => {
+        router.push('/dashboard');
+      }, 1000);
     } catch (error) {
       console.error('Failed to update session:', error);
+      // Still redirect even if update fails
+      setTimeout(() => {
+        router.push('/dashboard');
+      }, 1000);
     }
-  }, [sessionId, updateSession]);
+  }, [sessionId, updateSession, router]);
 
   // Initialize VAPI client
   useEffect(() => {
@@ -77,7 +97,8 @@ export default function InterviewPage({ params }: { params: Promise<{ sessionId:
       setConversationHistory([{
         role: 'system',
         message: 'Call connected. The AI interviewer will begin shortly.',
-        timestamp: new Date()
+        timestamp: new Date(),
+        isComplete: true
       }]);
     });
 
@@ -86,34 +107,108 @@ export default function InterviewPage({ params }: { params: Promise<{ sessionId:
       setIsCallActive(false);
       setIsConnecting(false);
       setAssistantIsSpeaking(false);
+      // Add any buffered message before ending
+      if (currentBuffer) {
+        setConversationHistory(prev => [...prev, {
+          role: currentBuffer.role,
+          message: currentBuffer.text,
+          timestamp: new Date(),
+          isComplete: true
+        }]);
+        setCurrentBuffer(null);
+      }
       handleCallEnd();
     });
 
     vapiClient.on('speech-start', () => {
       console.log('Assistant started speaking');
       setAssistantIsSpeaking(true);
+      // Start buffering assistant message
+      setCurrentBuffer({ role: 'assistant', text: '' });
     });
 
     vapiClient.on('speech-end', () => {
       console.log('Assistant stopped speaking');
       setAssistantIsSpeaking(false);
+      // Commit the buffered assistant message
+      if (currentBuffer && currentBuffer.role === 'assistant' && currentBuffer.text.trim()) {
+        setConversationHistory(prev => [...prev, {
+          role: 'assistant',
+          message: currentBuffer.text,
+          timestamp: new Date(),
+          isComplete: true
+        }]);
+        setCurrentBuffer(null);
+      }
     });
 
     vapiClient.on('volume-level', (level: number) => {
       setVolumeLevel(level);
+      // Detect user speaking based on volume level
+      if (!assistantIsSpeaking) {
+        setUserIsSpeaking(level > 5); // Lower threshold for better detection
+      }
     });
 
     vapiClient.on('message', (message: any) => {
       console.log('Message received:', message);
       
-      // Handle transcript messages
+      // Handle transcript messages - buffer them instead of showing immediately
       if (message.type === 'transcript' && message.transcript) {
-        const newMessage: ConversationMessage = {
-          role: message.role === 'assistant' ? 'assistant' : 'user',
-          message: message.transcript,
-          timestamp: new Date()
-        };
-        setConversationHistory(prev => [...prev, newMessage]);
+        const text = message.transcript.trim();
+        if (!text) return;
+
+        if (message.role === 'assistant') {
+          // Buffer assistant messages (will be committed on speech-end)
+          setCurrentBuffer(prev => ({
+            role: 'assistant',
+            text: prev?.role === 'assistant' ? prev.text + ' ' + text : text
+          }));
+        } else if (message.role === 'user') {
+          // Buffer user messages
+          setCurrentBuffer(prev => {
+            if (prev?.role === 'user') {
+              // Continue buffering user message
+              return { role: 'user', text: prev.text + ' ' + text };
+            } else {
+              // If there was an assistant message, commit it first
+              if (prev?.role === 'assistant' && prev.text.trim()) {
+                setConversationHistory(prevHistory => [...prevHistory, {
+                  role: 'assistant',
+                  message: prev.text,
+                  timestamp: new Date(),
+                  isComplete: true
+                }]);
+              }
+              // Start new user message buffer
+              return { role: 'user', text: text };
+            }
+          });
+        }
+
+        // Detect when user stops speaking (pause detection)
+        // We'll use a timeout to commit user messages
+        if (message.role === 'user') {
+          // Clear any existing timeout
+          if ((window as any).userSpeechTimeout) {
+            clearTimeout((window as any).userSpeechTimeout);
+          }
+          // Set new timeout to commit message after 2 seconds of silence
+          (window as any).userSpeechTimeout = setTimeout(() => {
+            setCurrentBuffer(prev => {
+              if (prev?.role === 'user' && prev.text.trim()) {
+                setConversationHistory(prevHistory => [...prevHistory, {
+                  role: 'user',
+                  message: prev.text,
+                  timestamp: new Date(),
+                  isComplete: true
+                }]);
+                return null;
+              }
+              return prev;
+            });
+          }, 2000);
+        }
       }
 
       // Handle conversation updates
@@ -132,6 +227,10 @@ export default function InterviewPage({ params }: { params: Promise<{ sessionId:
     return () => {
       if (vapiClient) {
         vapiClient.stop();
+      }
+      // Clear any pending timeouts
+      if ((window as any).userSpeechTimeout) {
+        clearTimeout((window as any).userSpeechTimeout);
       }
     };
   }, [handleCallEnd]);
@@ -428,37 +527,24 @@ Start by greeting the candidate and asking the first question.`;
             )}
           </div>
 
-          {/* Conversation Transcript */}
-          <div className="conversation-transcript">
-            <h3 className="transcript-title">Conversation</h3>
-            <div className="transcript-messages">
-              {conversationHistory.length === 0 ? (
-                <div className="transcript-empty">
-                  <p>The conversation will appear here...</p>
+          {/* Speaker Cards */}
+          <div className="speaker-cards-container">
+            <div className="speaker-card">
+              <div className={`speaker-avatar-wrapper ${assistantIsSpeaking ? 'speaking' : ''}`}>
+                <div className="speaker-avatar ai-avatar-icon">
+                  👩‍💼
                 </div>
-              ) : (
-                conversationHistory.map((msg, index) => (
-                  <div 
-                    key={index} 
-                    className={`transcript-message ${msg.role}`}
-                  >
-                    <div className="message-avatar">
-                      {msg.role === 'assistant' ? '🤖' : msg.role === 'user' ? '👤' : 'ℹ️'}
-                    </div>
-                    <div className="message-content">
-                      <div className="message-header">
-                        <span className="message-role">
-                          {msg.role === 'assistant' ? 'AI Interviewer' : msg.role === 'user' ? 'You' : 'System'}
-                        </span>
-                        <span className="message-time">
-                          {msg.timestamp.toLocaleTimeString()}
-                        </span>
-                      </div>
-                      <div className="message-text">{msg.message}</div>
-                    </div>
-                  </div>
-                ))
-              )}
+              </div>
+              <p className="speaker-name">AI Recruiter</p>
+            </div>
+
+            <div className="speaker-card">
+              <div className={`speaker-avatar-wrapper ${userIsSpeaking ? 'speaking' : ''}`}>
+                <div className="speaker-avatar user-avatar-icon">
+                  U
+                </div>
+              </div>
+              <p className="speaker-name">User</p>
             </div>
           </div>
 
