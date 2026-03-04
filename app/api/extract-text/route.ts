@@ -1,4 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { execSync } from 'child_process';
+import { writeFileSync, unlinkSync, existsSync, mkdirSync } from 'fs';
+import { join } from 'path';
+import { randomUUID } from 'crypto';
+
+// Ensure Node runtime
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
   try {
@@ -47,12 +55,33 @@ async function extractTextFromFile(file: File): Promise<string> {
       case 'pdf':
         console.log('Processing PDF file...');
         try {
-          // Use dynamic import for pdf-parse to handle ES module issues
-          const pdfParse = require('pdf-parse');
-          console.log('pdf-parse loaded successfully');
-          const pdfData = await pdfParse(Buffer.from(buffer));
-          console.log('PDF parsing successful, text length:', pdfData.text.length);
-          return pdfData.text;
+          // Write PDF to temp file and use external script
+          const tempDir = join(process.cwd(), '.tmp');
+          if (!existsSync(tempDir)) {
+            mkdirSync(tempDir, { recursive: true });
+          }
+          
+          const tempFile = join(tempDir, `${randomUUID()}.pdf`);
+          writeFileSync(tempFile, Buffer.from(buffer));
+          console.log('Temp file written:', tempFile);
+          
+          try {
+            const scriptPath = join(process.cwd(), 'lib', 'pdfExtractor.js');
+            const result = execSync(`node "${scriptPath}" "${tempFile}"`, {
+              encoding: 'utf-8',
+              maxBuffer: 10 * 1024 * 1024, // 10MB
+              cwd: process.cwd()
+            });
+            
+            const parsed = JSON.parse(result.trim());
+            console.log('PDF parsing successful, text length:', parsed.text.length);
+            return parsed.text;
+          } finally {
+            // Clean up temp file
+            if (existsSync(tempFile)) {
+              unlinkSync(tempFile);
+            }
+          }
         } catch (pdfError) {
           console.error('PDF parsing failed:', pdfError);
           throw new Error(`PDF parsing failed: ${pdfError instanceof Error ? pdfError.message : 'Unknown PDF error'}`);

@@ -89,7 +89,8 @@ export default function JobDescriptionUpload() {
     });
 
     if (!response.ok) {
-      throw new Error('Upload failed');
+      const errorText = await response.text().catch(() => '');
+      throw new Error(`Upload failed${errorText ? `: ${errorText}` : ''}`);
     }
 
     const result = await response.json();
@@ -109,18 +110,26 @@ export default function JobDescriptionUpload() {
         const uploadedUrl = await uploadFile(file, '/job-descriptions');
         console.log('Upload successful:', uploadedUrl);
         
+        let extractedText = '';
+        try {
+          extractedText = await extractTextFromFile(file);
+          console.log('Job description text extracted, length:', extractedText.length);
+        } catch (extractionError) {
+          console.error('Job description text extraction failed:', extractionError);
+          alert('File uploaded, but we could not read the job description text automatically. Please paste the content below.');
+        }
+
         setJobDescriptionData(prev => ({ 
           ...prev, 
+          file,
           uploading: false, 
           uploadedUrl,
-          text: '' // User will need to paste manually
+          text: extractedText
         }));
-        
-        // Inform user they need to paste content manually
-        alert(
-          `File uploaded successfully!\n\n` +
-          `Please copy and paste your job description content in the text area below for the ATS analysis to work properly.`
-        );
+
+        if (extractedText) {
+          alert('File uploaded and parsed successfully! You can review or edit the extracted job description below.');
+        }
         
         console.log('Job description upload completed successfully');
       } catch (error) {
@@ -142,11 +151,16 @@ export default function JobDescriptionUpload() {
     });
 
     if (!response.ok) {
-      throw new Error('Failed to extract text from file');
+      const errorBody = await response.json().catch(() => null);
+      const message = errorBody?.details || errorBody?.error || `Failed to extract text (status ${response.status})`;
+      throw new Error(message);
     }
 
     const result = await response.json();
-    return result.text || '';
+    if (!result?.text) {
+      throw new Error('No text returned from extractor');
+    }
+    return result.text;
   };
 
   const handleJobDescriptionTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -194,7 +208,7 @@ export default function JobDescriptionUpload() {
     }
   };
 
-  const canProceed = jobDescriptionData.file || jobDescriptionData.text.trim();
+  const canProceed = !!jobDescriptionData.text.trim();
 
   if (!resumeData) {
     return (

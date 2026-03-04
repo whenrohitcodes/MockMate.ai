@@ -12,16 +12,19 @@
   --font-mono: var(--font-geist-mono);
 }
 
+/* Force light mode - disable dark mode */
+/*
 @media (prefers-color-scheme: dark) {
   :root {
     --background: #0a0a0a;
     --foreground: #ededed;
   }
 }
+*/
 
 body {
-  background: var(--background);
-  color: var(--foreground);
+  background: #ffffff;
+  color: #171717;
   font-family: Arial, Helvetica, sans-serif;
 }
 
@@ -123,6 +126,7 @@ body {
   font-size: 2.25rem;
   font-weight: 700;
   margin-bottom: 1.5rem;
+  color: white !important;
 }
 
 @media (min-width: 768px) {
@@ -1206,6 +1210,144 @@ body {
   }
 }
 
+/* Interview History Section */
+.interview-history-section {
+  margin-top: 3rem;
+}
+
+.section-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin-bottom: 1.5rem;
+}
+
+.sessions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 1.5rem;
+}
+
+.session-card {
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.session-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.session-type {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.type-badge {
+  background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+  color: white;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.difficulty-badge {
+  background: #f3f4f6;
+  color: #4b5563;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: capitalize;
+}
+
+.session-date {
+  color: #9ca3af;
+  font-size: 0.875rem;
+}
+
+.session-scores {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.main-score {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  border: 4px solid;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #f9fafb;
+  flex-shrink: 0;
+}
+
+.main-score .score-value {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #1f2937;
+  line-height: 1;
+}
+
+.main-score .score-label {
+  font-size: 0.7rem;
+  color: #6b7280;
+  margin-top: 0.125rem;
+}
+
+.sub-scores {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.sub-score {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.sub-score-label {
+  color: #6b7280;
+  font-size: 0.875rem;
+}
+
+.sub-score-value {
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+.view-feedback-btn {
+  margin-top: auto;
+  width: 100%;
+  text-align: center;
+}
+
+@media (max-width: 640px) {
+  .sessions-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .session-scores {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .main-score {
+    align-self: center;
+  }
+}
+
 /* Resume Summary Styles */
 .resume-summary {
   @apply mb-8 p-4 bg-green-50 border border-green-200 rounded-xl;
@@ -1658,19 +1800,29 @@ body {
 }
 
 .config-summary-grid {
-  @apply grid grid-cols-2 md:grid-cols-4 gap-4;
+  display: flex;
+  justify-content: center;
+  gap: 3rem;
+  flex-wrap: wrap;
 }
 
 .config-item {
-  @apply space-y-1;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .config-label {
-  @apply text-sm font-medium text-gray-600;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: rgb(75 85 99);
 }
 
 .config-value {
-  @apply text-sm font-semibold text-gray-900 capitalize;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: rgb(17 24 39);
+  text-transform: capitalize;
 }
 
 .setup-progress {
@@ -2017,6 +2169,8 @@ body {
   font-size: 0.875rem;
   line-height: 1.5;
   transition: border-color 0.2s ease;
+  background-color: white;
+  color: rgb(17 24 39);
 }
 
 .content-textarea:focus {
@@ -2481,7 +2635,7 @@ body {
 
 .config-options {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: repeat(2, 1fr);
   gap: 1rem;
 }
 
@@ -2613,7 +2767,18 @@ body {
 .call-header {
   padding: 2rem;
   background: linear-gradient(135deg, rgb(59 130 246) 0%, rgb(37 99 235) 100%);
-  color: white;
+  color: white !important;
+}
+
+.call-header * {
+  color: white !important;
+}
+
+.call-header .status-text,
+.call-header .call-duration,
+.call-header .interview-type,
+.call-header .question-count {
+  color: white !important;
 }
 
 .call-info {
@@ -3066,4 +3231,532 @@ body {
 .error-text {
   flex: 1;
   font-size: 0.875rem;
+}
+
+/* Interview Start Page Styles */
+.interview-start {
+  padding: 1.5rem;
+}
+
+.start-header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.start-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: rgb(17 24 39);
+  margin-bottom: 0.5rem;
+}
+
+.start-subtitle {
+  font-size: 1rem;
+  color: rgb(107 114 128);
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+@media (min-width: 640px) {
+  .info-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+.info-item {
+  background: rgb(239 246 255);
+  border-radius: 0.75rem;
+  padding: 1rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.info-item .info-icon {
+  font-size: 1.25rem;
+  background: transparent;
+  margin-right: 0;
+  padding: 0;
+}
+
+.info-item .info-content {
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.info-item .info-content h3 {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: rgb(107 114 128);
+  margin: 0 0 0.25rem 0;
+}
+
+.info-item .info-content p {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: rgb(17 24 39);
+  margin: 0;
+}
+
+.interview-tips {
+  background: rgb(249 250 251);
+  border-radius: 0.75rem;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.interview-tips h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: rgb(17 24 39);
+  margin: 0 0 1rem 0;
+}
+
+.interview-tips ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.interview-tips li {
+  font-size: 0.875rem;
+  color: rgb(55 65 81);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.start-actions {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+/* Fix button visibility in dashboard/light backgrounds */
+.start-actions .btn-primary,
+.dashboard-card .btn-primary {
+  background: linear-gradient(135deg, rgb(37 99 235), rgb(59 130 246));
+  color: white;
+  border: none;
+}
+
+.start-actions .btn-primary:hover,
+.dashboard-card .btn-primary:hover {
+  background: linear-gradient(135deg, rgb(29 78 216), rgb(37 99 235));
+  transform: translateY(-2px);
+}
+
+.start-actions .btn-secondary,
+.dashboard-card .btn-secondary {
+  background: transparent;
+  color: rgb(37 99 235);
+  border: 2px solid rgb(37 99 235);
+}
+
+.start-actions .btn-secondary:hover,
+.dashboard-card .btn-secondary:hover {
+  background: rgb(239 246 255);
+  color: rgb(29 78 216);
+  border-color: rgb(29 78 216);
+}
+
+/* Feedback page action buttons */
+.feedback-actions {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin-top: 2rem;
+  padding-top: 2rem;
+  border-top: 1px solid rgb(229 231 235);
+}
+
+.feedback-actions .btn-primary,
+.feedback-actions .btn-secondary {
+  padding: 0.875rem 1.5rem;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.feedback-actions .btn-primary {
+  background: linear-gradient(135deg, rgb(37 99 235), rgb(59 130 246));
+  color: white;
+  border: none;
+}
+
+.feedback-actions .btn-primary:hover {
+  background: linear-gradient(135deg, rgb(29 78 216), rgb(37 99 235));
+  transform: translateY(-2px);
+}
+
+.feedback-actions .btn-secondary {
+  background: white;
+  color: rgb(37 99 235);
+  border: 2px solid rgb(37 99 235);
+}
+
+.feedback-actions .btn-secondary:hover {
+  background: rgb(239 246 255);
+  color: rgb(29 78 216);
+  border-color: rgb(29 78 216);
+}
+
+/* ============================================
+   GLOBAL TEXT VISIBILITY OVERRIDES
+   Ensures all text is visible regardless of theme
+   ============================================ */
+
+/* Force headings to be dark on light backgrounds */
+h1, h2, h3, h4, h5, h6 {
+  color: rgb(17 24 39);
+}
+
+p {
+  color: rgb(55 65 81);
+}
+
+label {
+  color: rgb(55 65 81);
+}
+
+/* Ensure lists are visible */
+ul, ol {
+  color: rgb(55 65 81);
+}
+
+li {
+  color: rgb(55 65 81);
+}
+
+/* Form elements */
+input, textarea, select {
+  color: rgb(17 24 39);
+  background-color: white;
+}
+
+input::placeholder, textarea::placeholder {
+  color: rgb(156 163 175);
+}
+
+/* Interview page specific */
+.call-header, .call-info, .call-meta {
+  color: rgb(17 24 39);
+}
+
+.status-text {
+  color: rgb(55 65 81);
+}
+
+.call-duration {
+  color: rgb(17 24 39);
+}
+
+.interview-type, .question-count {
+  color: rgb(107 114 128);
+}
+
+.avatar-label {
+  color: rgb(55 65 81);
+}
+
+.control-label {
+  color: rgb(55 65 81);
+}
+
+.speaker-name {
+  color: rgb(17 24 39);
+}
+
+/* Feedback page specific */
+.feedback-title, .feedback-progress, .feedback-subtitle {
+  color: rgb(17 24 39);
+}
+
+.feedback-progress {
+  color: #8b5cf6;
+}
+
+/* Feedback Generation Page Styles */
+.feedback-generation-page {
+  min-height: calc(100vh - 80px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+}
+
+.feedback-gen-card {
+  position: relative;
+  background: white;
+  border-radius: 1.5rem;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
+  padding: 3rem;
+  max-width: 500px;
+  width: 100%;
+  overflow: hidden;
+}
+
+.feedback-gen-bg {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.bg-circle {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(60px);
+  opacity: 0.4;
+}
+
+.bg-circle-1 {
+  width: 200px;
+  height: 200px;
+  background: linear-gradient(135deg, #8b5cf6, #a78bfa);
+  top: -50px;
+  right: -50px;
+  animation: float 8s ease-in-out infinite;
+}
+
+.bg-circle-2 {
+  width: 150px;
+  height: 150px;
+  background: linear-gradient(135deg, #3b82f6, #60a5fa);
+  bottom: -30px;
+  left: -30px;
+  animation: float 6s ease-in-out infinite reverse;
+}
+
+.bg-circle-3 {
+  width: 100px;
+  height: 100px;
+  background: linear-gradient(135deg, #10b981, #34d399);
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  animation: pulse-scale 3s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-20px) rotate(5deg); }
+}
+
+@keyframes pulse-scale {
+  0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.4; }
+  50% { transform: translate(-50%, -50%) scale(1.2); opacity: 0.6; }
+}
+
+.feedback-gen-content {
+  position: relative;
+  z-index: 1;
+  text-align: center;
+}
+
+.feedback-gen-icon {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  margin: 0 auto 2rem;
+}
+
+.icon-ring {
+  position: absolute;
+  border-radius: 50%;
+  border: 2px solid;
+}
+
+.icon-ring-outer {
+  inset: 0;
+  border-color: rgba(139, 92, 246, 0.2);
+  animation: spin-slow 8s linear infinite;
+}
+
+.icon-ring-middle {
+  inset: 10px;
+  border-color: rgba(59, 130, 246, 0.3);
+  animation: spin-slow 6s linear infinite reverse;
+}
+
+.icon-ring-inner {
+  inset: 20px;
+  border-color: rgba(16, 185, 129, 0.4);
+  animation: spin-slow 4s linear infinite;
+}
+
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.icon-center {
+  position: absolute;
+  inset: 30px;
+  background: linear-gradient(135deg, #8b5cf6, #3b82f6);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 10px 40px -10px rgba(139, 92, 246, 0.5);
+}
+
+.icon-emoji {
+  font-size: 2rem;
+  animation: bounce-subtle 2s ease-in-out infinite;
+}
+
+@keyframes bounce-subtle {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+}
+
+.feedback-gen-title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: rgb(17, 24, 39);
+  margin-bottom: 1rem;
+}
+
+.feedback-gen-status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  background: #8b5cf6;
+  border-radius: 50%;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+.status-text-animated {
+  color: #8b5cf6;
+  font-weight: 500;
+  font-size: 1rem;
+}
+
+.feedback-gen-progress {
+  margin-bottom: 1.5rem;
+}
+
+.progress-track {
+  height: 6px;
+  background: rgb(229, 231, 235);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #8b5cf6, #3b82f6, #10b981);
+  background-size: 200% 100%;
+  border-radius: 999px;
+  animation: progress-animation 3s ease-in-out infinite, gradient-shift 2s ease infinite;
+}
+
+@keyframes progress-animation {
+  0% { width: 0%; }
+  50% { width: 70%; }
+  100% { width: 100%; }
+}
+
+@keyframes gradient-shift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+.feedback-gen-desc {
+  color: rgb(107, 114, 128);
+  font-size: 0.95rem;
+  line-height: 1.6;
+  margin-bottom: 2rem;
+}
+
+.feedback-gen-steps {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  opacity: 0.4;
+  transition: all 0.3s ease;
+}
+
+.step.active {
+  opacity: 1;
+}
+
+.step.active .step-icon {
+  transform: scale(1.1);
+  animation: bounce-subtle 1s ease-in-out infinite;
+}
+
+.step.completed {
+  opacity: 1;
+}
+
+.step.completed .step-icon {
+  background: linear-gradient(135deg, #10b981, #34d399);
+}
+
+.step-icon {
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(135deg, rgb(229, 231, 235), rgb(243, 244, 246));
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+}
+
+.step span {
+  font-size: 0.75rem;
+  color: rgb(107, 114, 128);
+  font-weight: 500;
+}
+
+.step-connector {
+  width: 30px;
+  height: 2px;
+  background: rgb(229, 231, 235);
+  margin-bottom: 1.5rem;
+}
+
+/* Transcript messages */
+.message-content {
+  color: rgb(17 24 39);
+}
+
+/* Error messages - keep red */
+.error-text, .call-error {
+  color: rgb(239 68 68);
+}
+
+/* Success messages - keep green */
+.success-text {
+  color: rgb(16 185 129);
 }

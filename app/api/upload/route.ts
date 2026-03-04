@@ -1,17 +1,55 @@
 import { NextRequest, NextResponse } from 'next/server';
 import ImageKit from 'imagekit';
+import path from 'path';
+import dotenv from 'dotenv';
 
-let imagekit: ImageKit;
+// Explicitly load env for local dev (Windows/OneDrive sometimes misses .env.local)
+dotenv.config({ path: path.join(process.cwd(), '.env.local') });
+dotenv.config({ path: path.join(process.cwd(), '.env') });
 
-try {
-  imagekit = new ImageKit({
-    publicKey: process.env.IMAGEKIT_URL_PUBLIC_KEY!,
-    privateKey: process.env.IMAGEKIT_URL_PRIVATE_KEY!,
-    urlEndpoint: process.env.IMAGEKIT_URL_ENDPOINT!,
+// Force Node runtime so Buffer/ImageKit work correctly
+export const runtime = 'nodejs';
+
+let imagekit: ImageKit | undefined;
+
+function ensureImageKit(): ImageKit | undefined {
+  if (imagekit) return imagekit;
+
+  const publicKey = process.env.IMAGEKIT_URL_PUBLIC_KEY;
+  const privateKey = process.env.IMAGEKIT_URL_PRIVATE_KEY;
+  const endpoint = process.env.IMAGEKIT_URL_ENDPOINT;
+
+  const hasPublicKey = !!publicKey;
+  const hasPrivateKey = !!privateKey;
+  const hasEndpoint = !!endpoint;
+
+  // Log masked lengths so we can debug env loading without leaking secrets
+  console.log('ImageKit env check:', {
+    hasPublicKey,
+    hasPrivateKey,
+    hasEndpoint,
+    publicKeyLen: publicKey?.length || 0,
+    privateKeyLen: privateKey?.length || 0,
+    endpointLen: endpoint?.length || 0,
   });
-  console.log('ImageKit initialized successfully');
-} catch (error) {
-  console.error('Failed to initialize ImageKit:', error);
+
+  if (!hasPublicKey || !hasPrivateKey || !hasEndpoint) {
+    console.error('ImageKit keys missing');
+    return undefined;
+  }
+
+  try {
+    imagekit = new ImageKit({
+      publicKey,
+      privateKey,
+      urlEndpoint: endpoint,
+    });
+    console.log('ImageKit initialized successfully');
+    return imagekit;
+  } catch (error) {
+    console.error('Failed to initialize ImageKit:', error);
+    return undefined;
+  }
 }
 
 export async function POST(request: NextRequest) {
@@ -41,9 +79,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No file provided' }, { status: 400 });
     }
 
-    if (!imagekit) {
+    const ik = ensureImageKit();
+    if (!ik) {
       console.error('ImageKit not initialized');
-      return NextResponse.json({ error: 'ImageKit not configured' }, { status: 500 });
+      return NextResponse.json({
+        error: 'ImageKit not configured. Check env keys and restart dev server.',
+        debug: {
+          hasPublicKey: !!process.env.IMAGEKIT_URL_PUBLIC_KEY,
+          hasPrivateKey: !!process.env.IMAGEKIT_URL_PRIVATE_KEY,
+          hasEndpoint: !!process.env.IMAGEKIT_URL_ENDPOINT,
+        }
+      }, { status: 500 });
     }
 
     // Convert file to buffer
@@ -53,7 +99,7 @@ export async function POST(request: NextRequest) {
     console.log('Attempting ImageKit upload...');
 
     // Upload to ImageKit
-    const result = await imagekit.upload({
+    const result = await ik.upload({
       file: buffer,
       fileName: fileName || file.name,
       folder: folder || '/uploads',
@@ -73,9 +119,10 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('ImageKit upload error:', error);
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    console.error('ImageKit upload error:', message, error);
     return NextResponse.json(
-      { error: 'Upload failed', details: error },
+      { error: 'Upload failed', details: message },
       { status: 500 }
     );
   }

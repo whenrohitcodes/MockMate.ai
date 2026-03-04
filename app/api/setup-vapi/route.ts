@@ -86,18 +86,38 @@ async function createVAPIAssistant({
   console.log('Generating interview script...');
   const interviewScript = generateInterviewScript(questions, config);
   
+  const openRouterApiKey = process.env.OPENROUTER_API_KEY;
+  if (!openRouterApiKey) {
+    console.error('OPENROUTER_API_KEY missing');
+    throw new Error('OpenRouter API key not configured');
+  }
+
   const assistantPayload = {
     name: `Interview Assistant - Session ${sessionId}`,
     model: {
-      provider: "openai",
-      model: "gpt-4o-mini",
+      provider: "custom-llm",
+      url: "https://openrouter.ai/api/v1/chat/completions",
+      model: "nvidia/nemotron-3-nano-30b-a3b:free",
       temperature: 0.7,
       maxTokens: 500,
-      systemPrompt: interviewScript
+      systemPrompt: interviewScript,
+      metadataHeaders: {
+        "Authorization": `Bearer ${openRouterApiKey}`,
+        "HTTP-Referer": "https://mockmate.ai",
+        "X-Title": "MockMate AI Interview"
+      }
     },
     voice: {
-      provider: "11labs",
-      voiceId: "burt"
+      provider: "playht",
+      voiceId: "jennifer"
+    },
+    transcriber: {
+      provider: "deepgram",
+      model: "nova-2",
+      language: "en",
+      smartFormat: true,
+      endpointing: 300,
+      keywords: []
     },
     firstMessage: getWelcomeMessage(config),
     endCallMessage: "Thank you for completing the interview. You'll receive detailed feedback shortly. Have a great day!",
@@ -110,9 +130,12 @@ async function createVAPIAssistant({
     ],
     recordingEnabled: true,
     maxDurationSeconds: (config.duration + 5) * 60, // Add 5 minutes buffer
-    silenceTimeoutSeconds: 30,
-    responseDelaySeconds: 1,
-    numWordsToInterruptAssistant: 2,
+    silenceTimeoutSeconds: 120, // Increased to 2 minutes to prevent premature disconnection
+    responseDelaySeconds: 0.8,
+    llmRequestDelaySeconds: 0.2,
+    numWordsToInterruptAssistant: 3,
+    backgroundDenoisingEnabled: true,
+    modelOutputInMessagesEnabled: true,
     clientMessages: [
       "transcript",
       "hang",
@@ -218,30 +241,14 @@ TIMING:
 Remember: Your role is to facilitate a positive interview experience while gathering comprehensive information about the candidate's qualifications and fit for the role.`;
 }
 
-function getVAPIModelProvider(aiModel: string): string {
-  switch (aiModel) {
-    case 'chatgpt':
-      return 'openai';
-    case 'gemini':
-    case 'deepseek':
-      // For now, let's use OpenAI for VAPI as it's most reliable
-      return 'openai';
-    default:
-      return 'openai';
-  }
+function getVAPIModelProvider(_aiModel: string): string {
+  // Always use custom-llm for OpenRouter
+  return 'custom-llm';
 }
 
-function getVAPIModelName(aiModel: string): string {
-  switch (aiModel) {
-    case 'chatgpt':
-      return 'gpt-3.5-turbo'; // Use a more basic model to avoid quota issues
-    case 'gemini':
-    case 'deepseek':
-      // For now, fall back to GPT-3.5-turbo for VAPI compatibility
-      return 'gpt-3.5-turbo';
-    default:
-      return 'gpt-3.5-turbo';
-  }
+function getVAPIModelName(_aiModel: string): string {
+  // Always use Nemotron via OpenRouter
+  return 'nvidia/nemotron-3-nano-30b-a3b:free';
 }
 
 function getWelcomeMessage(config: any): string {

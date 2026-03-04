@@ -55,15 +55,22 @@ export default function ATSReportPage({ params }: { params: Promise<{ sessionId:
       generateATSReport();
     } else if (session && session.atsReport) {
       try {
-        setATSReport(JSON.parse(session.atsReport));
-        setIsLoading(false);
+        const parsed = JSON.parse(session.atsReport);
+        // Check if this is a fallback report - if so, auto-regenerate
+        if (parsed.summary?.includes('Fallback') || parsed.summary?.includes('fallback') || parsed.summary?.includes('model request failed')) {
+          // Auto-regenerate instead of showing fallback
+          generateATSReport();
+        } else {
+          setATSReport(parsed);
+          setIsLoading(false);
+        }
       } catch (error) {
         console.error('Error parsing stored ATS report:', error);
-        setError('Failed to load ATS report');
-        setIsLoading(false);
+        generateATSReport(); // Try to regenerate on parse error
       }
     } else if (session) {
-      setIsLoading(false);
+      // No report yet, auto-generate
+      generateATSReport();
     }
   }, [session]);
 
@@ -99,23 +106,29 @@ export default function ATSReportPage({ params }: { params: Promise<{ sessionId:
         jobDescriptionContentLength: session.jobDescriptionContent?.length || 0
       });
 
-      // Check if we have text content
+      // Check if we have text content or file URLs
       const hasResumeContent = session.resumeContent && session.resumeContent.trim().length > 0;
       const hasJobDescriptionContent = session.jobDescriptionContent && session.jobDescriptionContent.trim().length > 0;
+      const hasResumeFile = session.resumeFileUrl && session.resumeFileUrl.trim().length > 0;
+      const hasJobDescriptionFile = session.jobDescriptionFileUrl && session.jobDescriptionFileUrl.trim().length > 0;
 
-      if (!hasResumeContent || !hasJobDescriptionContent) {
-        throw new Error(`Missing required data: Resume: ${hasResumeContent ? 'Present' : 'Missing'}, Job Description: ${hasJobDescriptionContent ? 'Present' : 'Missing'}`);
+      if ((!hasResumeContent && !hasResumeFile) || (!hasJobDescriptionContent && !hasJobDescriptionFile)) {
+        throw new Error(`Missing required data: Resume: ${(hasResumeContent || hasResumeFile) ? 'Present' : 'Missing'}, Job Description: ${(hasJobDescriptionContent || hasJobDescriptionFile) ? 'Present' : 'Missing'}`);
       }
 
-      // Send text content to API
+      // Send text content AND file URLs to API (API will use file URLs if text is empty)
       const requestBody = {
-        resumeText: session.resumeContent,
-        jobDescriptionText: session.jobDescriptionContent
+        resumeText: session.resumeContent || '',
+        jobDescriptionText: session.jobDescriptionContent || '',
+        resumeFileUrl: session.resumeFileUrl || '',
+        jobDescriptionFileUrl: session.jobDescriptionFileUrl || ''
       };
 
       console.log('Request body:', {
         resumeTextLength: requestBody.resumeText?.length || 0,
-        jobDescriptionTextLength: requestBody.jobDescriptionText?.length || 0
+        jobDescriptionTextLength: requestBody.jobDescriptionText?.length || 0,
+        hasResumeFileUrl: !!requestBody.resumeFileUrl,
+        hasJobDescriptionFileUrl: !!requestBody.jobDescriptionFileUrl
       });
 
       const response = await fetch('/api/generate-ats-report', {
@@ -126,13 +139,12 @@ export default function ATSReportPage({ params }: { params: Promise<{ sessionId:
         body: JSON.stringify(requestBody),
       });
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        console.error('API Error Response:', errorData);
-        throw new Error(`Failed to generate ATS report: ${errorData.error || response.statusText}`);
-      }
+      const result = await response.json().catch(() => ({ success: false }));
 
-      const result = await response.json();
+      if (!response.ok || !result.success) {
+        console.error('API Error Response:', result);
+        throw new Error(`Failed to generate ATS report: ${result.error || response.statusText}`);
+      }
       
       // Update session with ATS report
       await updateSession({
@@ -218,14 +230,22 @@ export default function ATSReportPage({ params }: { params: Promise<{ sessionId:
         <div className="journey-container">
           <div className="dashboard-card journey-card">
             <div className="error-container">
-              <h2 className="error-title">No Report Available</h2>
-              <p className="error-message">ATS report could not be generated.</p>
-              <button 
-                onClick={() => router.push('/dashboard')}
-                className="btn-secondary"
-              >
-                Back to Dashboard
-              </button>
+              <h2 className="error-title">Generate ATS Report</h2>
+              <p className="error-message">Click below to analyze your resume against the job description.</p>
+              <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', marginTop: '1rem' }}>
+                <button 
+                  onClick={() => router.push('/dashboard')}
+                  className="btn-secondary"
+                >
+                  Back to Dashboard
+                </button>
+                <button 
+                  onClick={generateATSReport}
+                  className="btn-primary"
+                >
+                  Generate Report
+                </button>
+              </div>
             </div>
           </div>
         </div>

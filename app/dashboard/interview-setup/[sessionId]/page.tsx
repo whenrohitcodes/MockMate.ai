@@ -150,15 +150,6 @@ export default function InterviewSetupPage({ params }: { params: Promise<{ sessi
     generateInterviewQuestions();
   };
 
-  const getModelName = (model: string) => {
-    switch (model) {
-      case 'chatgpt': return 'ChatGPT (GPT-4)';
-      case 'gemini': return 'Google Gemini';
-      case 'deepseek': return 'DeepSeek';
-      default: return model;
-    }
-  };
-
   const getTypeName = (type: string) => {
     switch (type) {
       case 'technical': return 'Technical Interview';
@@ -209,10 +200,6 @@ export default function InterviewSetupPage({ params }: { params: Promise<{ sessi
           <div className="config-summary-display">
             <h3 className="config-summary-title">Interview Configuration</h3>
             <div className="config-summary-grid">
-              <div className="config-item">
-                <span className="config-label">AI Model:</span>
-                <span className="config-value">{getModelName(session.aiModel || 'chatgpt')}</span>
-              </div>
               <div className="config-item">
                 <span className="config-label">Type:</span>
                 <span className="config-value">{getTypeName(session.interviewType || 'mixed')}</span>

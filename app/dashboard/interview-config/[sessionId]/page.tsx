@@ -22,9 +22,9 @@ export default function InterviewConfigPage({ params }: { params: Promise<{ sess
   // Convex mutations
   const updateSession = useMutation(api.interviewSessions.updateSession);
 
-  // Configuration state
+  // Configuration state - Always use Nemotron model
   const [config, setConfig] = useState({
-    aiModel: 'chatgpt',
+    aiModel: 'nemotron',
     interviewType: 'mixed',
     difficulty: 'intermediate',
     duration: 30
@@ -98,46 +98,6 @@ export default function InterviewConfigPage({ params }: { params: Promise<{ sess
 
           {/* Configuration Form */}
           <div className="config-form">
-            {/* AI Model Selection */}
-            <div className="config-section">
-              <h3 className="config-section-title">AI Model</h3>
-              <p className="config-section-description">
-                Choose the AI model that will conduct your interview
-              </p>
-              <div className="config-options">
-                <div 
-                  className={`config-option ${config.aiModel === 'chatgpt' ? 'selected' : ''}`}
-                  onClick={() => setConfig({...config, aiModel: 'chatgpt'})}
-                >
-                  <div className="option-header">
-                    <span className="option-icon">🤖</span>
-                    <span className="option-name">ChatGPT (GPT-4)</span>
-                  </div>
-                  <p className="option-description">Most reliable and conversational</p>
-                </div>
-                <div 
-                  className={`config-option ${config.aiModel === 'gemini' ? 'selected' : ''}`}
-                  onClick={() => setConfig({...config, aiModel: 'gemini'})}
-                >
-                  <div className="option-header">
-                    <span className="option-icon">✨</span>
-                    <span className="option-name">Google Gemini</span>
-                  </div>
-                  <p className="option-description">Fast and efficient responses</p>
-                </div>
-                <div 
-                  className={`config-option ${config.aiModel === 'deepseek' ? 'selected' : ''}`}
-                  onClick={() => setConfig({...config, aiModel: 'deepseek'})}
-                >
-                  <div className="option-header">
-                    <span className="option-icon">🔍</span>
-                    <span className="option-name">DeepSeek</span>
-                  </div>
-                  <p className="option-description">Technical and analytical</p>
-                </div>
-              </div>
-            </div>
-
             {/* Interview Type */}
             <div className="config-section">
               <h3 className="config-section-title">Interview Type</h3>

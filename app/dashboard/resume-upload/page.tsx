@@ -61,7 +61,8 @@ export default function ResumeUpload() {
     });
 
     if (!response.ok) {
-      throw new Error('Upload failed');
+      const errorText = await response.text().catch(() => '');
+      throw new Error(`Upload failed${errorText ? `: ${errorText}` : ''}`);
     }
 
     const result = await response.json();
@@ -75,27 +76,46 @@ export default function ResumeUpload() {
       
       try {
         console.log('Processing file:', file.name, file.type, file.size);
-        
-        // Upload to ImageKit first
-        console.log('Uploading to ImageKit...');
-        const uploadedUrl = await uploadFile(file, '/resumes');
-        console.log('Upload successful:', uploadedUrl);
-        
-        // For now, skip automatic text extraction and ask user to paste content
+
+        // Extract text first so the user can proceed even if upload fails
+        let extractedText = '';
+        try {
+          extractedText = await extractTextFromFile(file);
+          console.log('Resume text extracted, length:', extractedText.length);
+        } catch (extractionError) {
+          console.error('Resume text extraction failed:', extractionError);
+        }
+
+        // Attempt upload, but if it fails keep extracted text so user can proceed
+        let uploadedUrl = '';
+        try {
+          console.log('Uploading to ImageKit...');
+          uploadedUrl = await uploadFile(file, '/resumes');
+          console.log('Upload successful:', uploadedUrl);
+        } catch (uploadError) {
+          console.error('Resume upload failed:', uploadError);
+          alert('Upload failed, but we extracted the text. You can continue without the upload.');
+        }
+
         setResumeData(prev => ({ 
           ...prev, 
+          file,
           uploading: false, 
           uploadedUrl,
-          text: '' // User will need to paste manually
+          text: extractedText
         }));
+
+        console.log('State updated. Text length:', extractedText.length, 'Type:', typeof extractedText);
+
+        if (extractedText && uploadedUrl) {
+          alert('File uploaded and parsed successfully! Extracted ' + extractedText.length + ' characters.');
+        } else if (extractedText && !uploadedUrl) {
+          alert('Text extracted successfully (' + extractedText.length + ' characters), but upload to storage failed. You can still continue.');
+        } else {
+          alert('We could not read your resume automatically. Please try a different file format (PDF, DOCX, or TXT).');
+        }
         
-        // Inform user they need to paste content manually
-        alert(
-          `File uploaded successfully!\n\n` +
-          `Please copy and paste your resume content in the text area below for the ATS analysis to work properly.`
-        );
-        
-        console.log('Resume upload completed successfully');
+        console.log('Resume processing completed');
       } catch (error) {
         console.error('Resume upload failed:', error);
         setResumeData(prev => ({ ...prev, uploading: false }));
@@ -115,11 +135,16 @@ export default function ResumeUpload() {
     });
 
     if (!response.ok) {
-      throw new Error('Failed to extract text from file');
+      const errorBody = await response.json().catch(() => null);
+      const message = errorBody?.details || errorBody?.error || `Failed to extract text (status ${response.status})`;
+      throw new Error(message);
     }
 
     const result = await response.json();
-    return result.text || '';
+    if (!result?.text) {
+      throw new Error('No text returned from extractor');
+    }
+    return result.text;
   };
 
   const handleResumeTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -127,23 +152,28 @@ export default function ResumeUpload() {
   };
 
   const handleNextStep = () => {
-    if (resumeData.file || resumeData.text.trim()) {
-      // Store resume data in sessionStorage to pass to next page
-      const resumeInfo = {
-        file: resumeData.file ? {
-          name: resumeData.file.name,
-          size: resumeData.file.size,
-          type: resumeData.file.type
-        } : null,
-        text: resumeData.text,
-        uploadedUrl: resumeData.uploadedUrl
-      };
-      sessionStorage.setItem('resumeData', JSON.stringify(resumeInfo));
-      router.push('/dashboard/job-description');
+    if (!resumeData.text || !resumeData.text.trim()) {
+      alert('We could not read your resume. Please try uploading a different file format.');
+      return;
     }
+
+    // Store resume data in sessionStorage to pass to next page
+    const resumeInfo = {
+      file: resumeData.file ? {
+        name: resumeData.file.name,
+        size: resumeData.file.size,
+        type: resumeData.file.type
+      } : null,
+      text: resumeData.text,
+      uploadedUrl: resumeData.uploadedUrl
+    };
+    sessionStorage.setItem('resumeData', JSON.stringify(resumeInfo));
+    router.push('/dashboard/job-description');
   };
 
-  const canProceed = resumeData.file || resumeData.text.trim();
+  const canProceed = !!(resumeData.text && typeof resumeData.text === 'string' && resumeData.text.trim());
+
+  console.log('Render - canProceed:', canProceed, 'text type:', typeof resumeData.text, 'text length:', resumeData.text?.length, 'uploading:', resumeData.uploading);
 
   return (
     <div className="dashboard-container">
@@ -153,7 +183,7 @@ export default function ResumeUpload() {
           <div className="journey-header">
             <h1 className="journey-title">Upload Your Resume</h1>
             <p className="journey-description">
-              Upload your resume file or paste your resume content to get an ATS compatibility analysis
+              Upload your resume file to get an ATS compatibility analysis
             </p>
           </div>
 
@@ -186,14 +216,14 @@ export default function ResumeUpload() {
             <div className="step-header">
               <h2 className="step-title">Upload Your Resume</h2>
               <p className="step-description">
-                Upload your resume file or paste your resume content below
+                Upload your resume file (PDF, DOC, DOCX, or TXT)
               </p>
             </div>
 
             <div className="upload-options">
               {/* File Upload Option */}
               <div className="upload-option">
-                <h3 className="upload-option-title">Option 1: Upload File</h3>
+                <h3 className="upload-option-title">Upload File</h3>
                 <div 
                   className="file-upload-area"
                   onClick={() => resumeFileRef.current?.click()}
@@ -219,6 +249,7 @@ export default function ResumeUpload() {
                         <p className="file-name">{resumeData.file.name}</p>
                         <p className="file-size">{(resumeData.file.size / 1024 / 1024).toFixed(2)} MB</p>
                         {resumeData.uploadedUrl && <p className="upload-success">✓ Uploaded successfully</p>}
+                        {resumeData.text && <p className="upload-success">✓ Extracted {resumeData.text.length} characters</p>}
                       </>
                     ) : (
                       <>
@@ -231,22 +262,6 @@ export default function ResumeUpload() {
                     )}
                   </div>
                 </div>
-              </div>
-
-              <div className="upload-divider">
-                <span className="divider-text">OR</span>
-              </div>
-
-              {/* Text Input Option */}
-              <div className="upload-option">
-                <h3 className="upload-option-title">Option 2: Paste Content</h3>
-                <textarea
-                  value={resumeData.text}
-                  onChange={handleResumeTextChange}
-                  placeholder="Paste your resume content here..."
-                  className="content-textarea"
-                  rows={10}
-                />
               </div>
             </div>
           </div>

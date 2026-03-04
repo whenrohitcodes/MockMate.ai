@@ -1,16 +1,37 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { OpenAI } from 'openai';
+import path from 'path';
+import dotenv from 'dotenv';
 
-// Initialize OpenAI clients for different models
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+// Ensure env vars load in dev
+dotenv.config({ path: path.join(process.cwd(), '.env.local') });
+dotenv.config({ path: path.join(process.cwd(), '.env') });
 
-// OpenRouter for alternative models
-const openrouter = new OpenAI({
-  baseURL: "https://openrouter.ai/api/v1",
-  apiKey: process.env.OPENROUTER_API_KEY,
-});
+// Lazy client for OpenRouter (Nemotron model)
+let openrouterClient: OpenAI | null = null;
+
+function ensureOpenRouter(): OpenAI | null {
+  if (openrouterClient) return openrouterClient;
+  const key = process.env.OPENROUTER_API_KEY;
+  if (!key) {
+    console.error('OPENROUTER_API_KEY missing');
+    return null;
+  }
+  try {
+    openrouterClient = new OpenAI({
+      baseURL: 'https://openrouter.ai/api/v1',
+      apiKey: key,
+      defaultHeaders: {
+        'HTTP-Referer': 'http://localhost:3000',
+        'X-Title': 'MockMate AI Interview',
+      },
+    });
+    return openrouterClient;
+  } catch (err) {
+    console.error('Failed to init OpenRouter client:', err);
+    return null;
+  }
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -26,8 +47,8 @@ export async function POST(request: NextRequest) {
 
     if (!resumeContent || !jobDescriptionContent) {
       return NextResponse.json(
-        { error: 'Resume and job description are required' },
-        { status: 400 }
+        { success: false, error: 'Resume and job description are required' },
+        { status: 200 }
       );
     }
 
@@ -50,8 +71,8 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Question generation error:', error);
     return NextResponse.json(
-      { error: 'Failed to generate interview questions' },
-      { status: 500 }
+      { success: true, questions: generateFallbackQuestions('mixed', 5, 'intermediate'), sessionId: null, error: 'Fallback used' },
+      { status: 200 }
     );
   }
 }
@@ -121,39 +142,49 @@ IMPORTANT REQUIREMENTS:
 Focus on creating questions that will help evaluate the candidate's fit for this specific role while giving them opportunities to showcase their relevant experience and skills.
 `;
 
-  let client = openai;
-  let model = 'gpt-4o-mini';
-
-  // Select appropriate model and client
-  switch (aiModel) {
-    case 'chatgpt':
-      client = openai;
-      model = 'gpt-4o-mini';
-      break;
-    case 'gemini':
-      client = openrouter;
-      model = 'google/gemini-2.0-flash-exp:free';
-      break;
-    case 'deepseek':
-      client = openrouter;
-      model = 'deepseek/deepseek-chat';
-      break;
+  // Use OpenRouter with Nemotron model for all question generation
+  const client = ensureOpenRouter();
+  
+  // If no client available, return fallback questions
+  if (!client) {
+    console.error('No OpenRouter client available for question generation');
+    return generateFallbackQuestions(interviewType, questionCount, difficulty);
   }
 
-  const response = await client.chat.completions.create({
-    model,
-    messages: [{ role: 'user', content: prompt }],
-    temperature: 0.7,
-    max_tokens: 2000,
-  });
-
-  const content = response.choices[0].message.content;
   try {
-    const result = JSON.parse(content || '{}');
-    return result.questions || [];
+    console.log('Calling Nemotron model for question generation...');
+    const response = await client.chat.completions.create({
+      model: 'nvidia/nemotron-3-nano-30b-a3b:free',
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.7,
+      max_tokens: 2000,
+    });
+    console.log('Nemotron questions response received');
+
+    const content = response.choices?.[0]?.message?.content;
+    if (!content) {
+      return generateFallbackQuestions(interviewType, questionCount, difficulty);
+    }
+
+    try {
+      // Try to extract JSON from the response
+      let jsonContent = content;
+      if (jsonContent.includes('```json')) {
+        const jsonMatch = jsonContent.match(/```json\s*([\s\S]*?)\s*```/);
+        if (jsonMatch) jsonContent = jsonMatch[1];
+      } else if (jsonContent.includes('```')) {
+        const jsonMatch = jsonContent.match(/```\s*([\s\S]*?)\s*```/);
+        if (jsonMatch) jsonContent = jsonMatch[1];
+      }
+      
+      const result = JSON.parse(jsonContent || '{}');
+      return result.questions || generateFallbackQuestions(interviewType, questionCount, difficulty);
+    } catch (error) {
+      console.error('Error parsing questions JSON:', error);
+      return generateFallbackQuestions(interviewType, questionCount, difficulty);
+    }
   } catch (error) {
-    console.error('Error parsing questions JSON:', error);
-    // Fallback: create basic questions
+    console.error('Question model call failed:', error);
     return generateFallbackQuestions(interviewType, questionCount, difficulty);
   }
 }

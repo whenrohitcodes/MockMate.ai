@@ -3,12 +3,13 @@
 import { useUser } from '@clerk/nextjs';
 import { useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
-import { redirect } from 'next/navigation';
+import { redirect, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 export default function Dashboard() {
   const { user, isLoaded } = useUser();
   const [mounted, setMounted] = useState(false);
+  const router = useRouter();
 
   // Get user data from Convex
   const convexUser = useQuery(api.users.getUserByClerkId, 
@@ -17,6 +18,11 @@ export default function Dashboard() {
 
   // Get user's mock interviews
   const mockInterviews = useQuery(api.mockInterviews.getMockInterviewsByUser,
+    convexUser?._id ? { userId: convexUser._id } : "skip"
+  );
+
+  // Get user's interview sessions
+  const interviewSessions = useQuery(api.interviewSessions.getSessionsByUser,
     convexUser?._id ? { userId: convexUser._id } : "skip"
   );
 
@@ -48,6 +54,24 @@ export default function Dashboard() {
   const completedInterviews = mockInterviews?.filter(interview => interview.isCompleted).length || 0;
   const averageRating = userProgress?.averageRating || 0;
   const recentInterviews = mockInterviews?.slice(0, 3) || [];
+
+  // Get completed sessions with feedback
+  const completedSessions = interviewSessions?.filter(session => session.status === 'completed') || [];
+
+  const getScoreColor = (score: number | undefined): string => {
+    if (!score) return '#6b7280';
+    if (score >= 80) return '#10b981';
+    if (score >= 60) return '#f59e0b';
+    return '#ef4444';
+  };
+
+  const formatDate = (timestamp: number): string => {
+    return new Date(timestamp).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    });
+  };
 
   return (
     <div className="dashboard-container">
@@ -85,6 +109,60 @@ export default function Dashboard() {
             </div>
           </div>
         </div>
+
+        {/* Interview History Section */}
+        {completedSessions.length > 0 && (
+          <div className="interview-history-section">
+            <h2 className="section-title">Your Interview History</h2>
+            <div className="sessions-grid">
+              {completedSessions.map((session) => (
+                <div key={session._id} className="dashboard-card session-card">
+                  <div className="session-header">
+                    <div className="session-type">
+                      <span className="type-badge">{session.interviewType || 'Mixed'}</span>
+                      <span className="difficulty-badge">{session.difficulty || 'Intermediate'}</span>
+                    </div>
+                    <span className="session-date">{formatDate(session.createdAt)}</span>
+                  </div>
+                  
+                  <div className="session-scores">
+                    <div className="main-score" style={{ borderColor: getScoreColor(session.overallScore) }}>
+                      <span className="score-value">{session.overallScore || '-'}</span>
+                      <span className="score-label">Overall</span>
+                    </div>
+                    <div className="sub-scores">
+                      <div className="sub-score">
+                        <span className="sub-score-label">Technical</span>
+                        <span className="sub-score-value" style={{ color: getScoreColor(session.technicalScore) }}>
+                          {session.technicalScore || '-'}%
+                        </span>
+                      </div>
+                      <div className="sub-score">
+                        <span className="sub-score-label">Communication</span>
+                        <span className="sub-score-value" style={{ color: getScoreColor(session.communicationScore) }}>
+                          {session.communicationScore || '-'}%
+                        </span>
+                      </div>
+                      <div className="sub-score">
+                        <span className="sub-score-label">Confidence</span>
+                        <span className="sub-score-value" style={{ color: getScoreColor(session.confidenceScore) }}>
+                          {session.confidenceScore || '-'}%
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <button 
+                    onClick={() => router.push(`/dashboard/feedback/${session._id}`)}
+                    className="btn-secondary view-feedback-btn"
+                  >
+                    View Full Feedback →
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

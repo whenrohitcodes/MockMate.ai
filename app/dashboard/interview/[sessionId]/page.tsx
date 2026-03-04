@@ -43,9 +43,27 @@ export default function InterviewPage({ params }: { params: Promise<{ sessionId:
   const [callDuration, setCallDuration] = useState(0);
   const [currentBuffer, setCurrentBuffer] = useState<{role: 'assistant' | 'user', text: string} | null>(null);
   const transcriptRef = useRef<HTMLDivElement>(null);
+  
+  // Use a ref to track conversation history for the callback
+  const conversationHistoryRef = useRef<ConversationMessage[]>([]);
+  
+  // Track if interview actually happened (user spoke or AI asked questions)
+  const [interviewStarted, setInterviewStarted] = useState(false);
+  const interviewStartedRef = useRef(false);
+  const callEndedDueToErrorRef = useRef(false);
 
   // Get questions
   const questions = session?.generatedQuestions || [];
+  const questionsRef = useRef(questions);
+
+  // Keep refs in sync with state
+  useEffect(() => {
+    conversationHistoryRef.current = conversationHistory;
+  }, [conversationHistory]);
+
+  useEffect(() => {
+    questionsRef.current = questions;
+  }, [questions]);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -54,35 +72,127 @@ export default function InterviewPage({ params }: { params: Promise<{ sessionId:
     }
   }, [conversationHistory]);
 
+  // State for feedback generation
+  const [isGeneratingFeedback, setIsGeneratingFeedback] = useState(false);
+  const [feedbackProgress, setFeedbackProgress] = useState('');
+
   // Handle call end
   const handleCallEnd = useCallback(async () => {
     try {
+      setIsGeneratingFeedback(true);
+      setFeedbackProgress('Saving interview data...');
+
+      // First save the conversation history
+      await updateSession({
+        sessionId: sessionId as Id<"interviewSessions">,
+        updates: {
+          status: 'generating_feedback',
+          completedAt: Date.now()
+        }
+      });
+
+      setFeedbackProgress('Analyzing your responses...');
+
+      // Use refs to get the latest conversation history (avoids stale closure)
+      const currentConversation = conversationHistoryRef.current;
+      const currentQuestions = questionsRef.current;
+      
+      console.log('Generating feedback with conversation:', currentConversation.length, 'messages');
+      console.log('Questions:', currentQuestions.length);
+
+      // Get the full conversation history from ref
+      const fullConversation = currentConversation.map(msg => ({
+        role: msg.role,
+        message: msg.message,
+        timestamp: msg.timestamp.toISOString()
+      }));
+
+      // If conversation is empty, create a placeholder
+      if (fullConversation.length === 0) {
+        console.warn('No conversation history captured. Adding placeholder.');
+        fullConversation.push({
+          role: 'system',
+          message: 'Interview completed but transcript was not captured.',
+          timestamp: new Date().toISOString()
+        });
+      }
+
+      // Generate AI feedback
+      const feedbackResponse = await fetch('/api/generate-feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          conversationHistory: fullConversation,
+          questions: currentQuestions,
+          jobDescription: session?.jobDescriptionContent,
+          resumeContent: session?.resumeContent,
+          interviewType: session?.interviewType,
+          difficulty: session?.difficulty
+        })
+      });
+
+      if (!feedbackResponse.ok) {
+        const errorText = await feedbackResponse.text();
+        console.error('Feedback API error:', errorText);
+        throw new Error('Failed to generate feedback');
+      }
+
+      const { feedback } = await feedbackResponse.json();
+      
+      console.log('Received feedback:', feedback);
+      
+      setFeedbackProgress('Saving feedback...');
+
+      // Save feedback to database
       await updateSession({
         sessionId: sessionId as Id<"interviewSessions">,
         updates: {
           status: 'completed',
-          completedAt: Date.now()
+          overallScore: feedback.overallScore || 0,
+          technicalScore: feedback.technicalScore || 0,
+          communicationScore: feedback.communicationScore || 0,
+          confidenceScore: feedback.confidenceScore || 0,
+          feedbackData: JSON.stringify(feedback),
+          strengths: feedback.strengths || [],
+          improvementAreas: feedback.areasForImprovement || []
         }
       });
+
+      setFeedbackProgress('Complete! Redirecting to feedback...');
       
-      // Redirect to dashboard after a short delay
+      // Redirect to feedback page
       setTimeout(() => {
-        router.push('/dashboard');
+        router.push(`/dashboard/feedback/${sessionId}`);
       }, 1000);
     } catch (error) {
-      console.error('Failed to update session:', error);
-      // Still redirect even if update fails
+      console.error('Failed to generate feedback:', error);
+      setFeedbackProgress('Error generating feedback. Redirecting...');
+      
+      // Update status to completed even if feedback fails
+      try {
+        await updateSession({
+          sessionId: sessionId as Id<"interviewSessions">,
+          updates: {
+            status: 'completed',
+            completedAt: Date.now()
+          }
+        });
+      } catch (e) {
+        console.error('Failed to update session:', e);
+      }
+      
+      // Redirect to dashboard if feedback generation fails
       setTimeout(() => {
         router.push('/dashboard');
-      }, 1000);
+      }, 2000);
     }
-  }, [sessionId, updateSession, router]);
+  }, [sessionId, updateSession, router, session]);
 
   // Initialize VAPI client
   useEffect(() => {
     const publicKey = process.env.NEXT_PUBLIC_VAPI_PUBLIC_KEY;
-    if (!publicKey) {
-      setError('VAPI is not configured. Please contact support.');
+    if (!publicKey || publicKey === 'your_vapi_public_key_here') {
+      setError('VAPI API keys are not configured. Please add your VAPI Public Key to the .env.local file. Get your keys from https://dashboard.vapi.ai');
       return;
     }
 
@@ -94,6 +204,7 @@ export default function InterviewPage({ params }: { params: Promise<{ sessionId:
       console.log('Call started');
       setIsCallActive(true);
       setIsConnecting(false);
+      callEndedDueToErrorRef.current = false; // Reset error flag
       setConversationHistory([{
         role: 'system',
         message: 'Call connected. The AI interviewer will begin shortly.',
@@ -103,7 +214,7 @@ export default function InterviewPage({ params }: { params: Promise<{ sessionId:
     });
 
     vapiClient.on('call-end', () => {
-      console.log('Call ended');
+      console.log('Call ended, interviewStarted:', interviewStartedRef.current, 'errorOccurred:', callEndedDueToErrorRef.current);
       setIsCallActive(false);
       setIsConnecting(false);
       setAssistantIsSpeaking(false);
@@ -117,12 +228,25 @@ export default function InterviewPage({ params }: { params: Promise<{ sessionId:
         }]);
         setCurrentBuffer(null);
       }
-      handleCallEnd();
+      
+      // Only generate feedback if interview actually happened and didn't end due to error
+      if (interviewStartedRef.current && !callEndedDueToErrorRef.current) {
+        handleCallEnd();
+      } else {
+        console.log('Skipping feedback generation - interview did not happen properly');
+        // Don't redirect, let user try again
+      }
     });
 
     vapiClient.on('speech-start', () => {
       console.log('Assistant started speaking');
       setAssistantIsSpeaking(true);
+      // Mark interview as actually started when AI begins speaking
+      if (!interviewStartedRef.current) {
+        setInterviewStarted(true);
+        interviewStartedRef.current = true;
+        console.log('Interview marked as started');
+      }
       // Start buffering assistant message
       setCurrentBuffer({ role: 'assistant', text: '' });
     });
@@ -215,13 +339,52 @@ export default function InterviewPage({ params }: { params: Promise<{ sessionId:
       if (message.type === 'conversation-update') {
         console.log('Conversation update:', message);
       }
+      
+      // Log all message types for debugging
+      if (message.type === 'status-update') {
+        console.log('Status update:', message);
+      }
+      
+      // Handle error messages from the call
+      if (message.type === 'error' || message.error) {
+        console.error('Call message error:', message);
+      }
     });
 
     vapiClient.on('error', (error: any) => {
-      console.error('VAPI error:', error);
-      setError(`Call error: ${error.message || 'Unknown error'}`);
+      console.error('VAPI error event:', error);
+      console.error('Error details:', JSON.stringify(error, null, 2));
+      
+      // Mark that call ended due to error - prevent feedback generation
+      callEndedDueToErrorRef.current = true;
+      
+      // Provide more helpful error messages based on error type
+      let errorMessage = 'Call error: ';
+      const errorStr = JSON.stringify(error).toLowerCase();
+      const errorMsg = error?.errorMsg || error?.error?.msg || error?.message || '';
+      const nestedErrorMsg = error?.error?.error?.message || '';
+      
+      if (errorStr.includes('invalid key') || nestedErrorMsg.includes('Invalid Key') || errorStr.includes('unauthorized')) {
+        errorMessage = 'VAPI API Key Error: Your VAPI keys are invalid or misconfigured. Please check that:\n\n• NEXT_PUBLIC_VAPI_PUBLIC_KEY has your PUBLIC key (not private)\n• VAPI_PRIVATE_KEY has your PRIVATE key\n• Keys are from https://dashboard.vapi.ai\n\nRestart the dev server after updating .env.local';
+      } else if (errorStr.includes('ejection') || errorStr.includes('ejected') || errorMsg.includes('Meeting has ended')) {
+        errorMessage = 'The interview call was disconnected. This can happen if:\n• Your microphone is not working properly\n• The AI could not hear your audio\n• There was a network interruption\n\nPlease check your microphone settings and try again.';
+      } else if (errorStr.includes('microphone') || errorStr.includes('audio') || errorStr.includes('media')) {
+        errorMessage = 'Microphone error: Please ensure your microphone is connected, working, and you have granted browser permission to use it.';
+      } else if (errorStr.includes('network') || errorStr.includes('connection')) {
+        errorMessage = 'Network error: Please check your internet connection and try again.';
+      } else if (errorStr.includes('timeout')) {
+        errorMessage = 'Connection timed out. Please check your internet connection and try again.';
+      } else {
+        errorMessage += errorMsg || nestedErrorMsg || 'Unknown error occurred. Please try again.';
+      }
+      
+      setError(errorMessage);
       setIsCallActive(false);
       setIsConnecting(false);
+      
+      // Reset interview started flag so user can retry
+      setInterviewStarted(false);
+      interviewStartedRef.current = false;
     });
 
     return () => {
@@ -274,7 +437,9 @@ export default function InterviewPage({ params }: { params: Promise<{ sessionId:
     );
   }
 
-  if (session.status !== 'interview_ready' && session.status !== 'in_progress') {
+  // Allow interview_ready, in_progress, generating_feedback, and completed statuses
+  const allowedStatuses = ['interview_ready', 'in_progress', 'generating_feedback', 'completed'];
+  if (!allowedStatuses.includes(session.status)) {
     return (
       <div className="dashboard-container">
         <div className="error-container">
@@ -283,6 +448,19 @@ export default function InterviewPage({ params }: { params: Promise<{ sessionId:
           <button onClick={() => router.push(`/dashboard/interview-setup/${sessionId}`)} className="btn-primary">
             Back to Setup
           </button>
+        </div>
+      </div>
+    );
+  }
+
+  // If already completed, redirect to feedback page
+  if (session.status === 'completed' && !isGeneratingFeedback) {
+    router.push(`/dashboard/feedback/${sessionId}`);
+    return (
+      <div className="dashboard-container">
+        <div className="loading-container">
+          <div className="loading-spinner-large"></div>
+          <p>Redirecting to feedback...</p>
         </div>
       </div>
     );
@@ -297,8 +475,26 @@ export default function InterviewPage({ params }: { params: Promise<{ sessionId:
     try {
       setIsConnecting(true);
       setError(null);
+      setCallDuration(0);
+      
+      // Reset tracking flags for new call attempt
+      callEndedDueToErrorRef.current = false;
+      setInterviewStarted(false);
+      interviewStartedRef.current = false;
 
-      console.log('Starting call with inline assistant configuration');
+      // Check microphone permission first
+      try {
+        console.log('Requesting microphone permission...');
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        // Stop the test stream immediately
+        stream.getTracks().forEach(track => track.stop());
+        console.log('Microphone permission granted');
+      } catch (micError) {
+        console.error('Microphone permission denied:', micError);
+        setError('Microphone access is required for the interview. Please allow microphone access and try again.');
+        setIsConnecting(false);
+        return;
+      }
 
       // Update session status
       await updateSession({
@@ -308,6 +504,7 @@ export default function InterviewPage({ params }: { params: Promise<{ sessionId:
         }
       });
 
+      // Always use inline assistant configuration (works with just public key)
       // Create interview script
       const interviewScript = `You are a professional interview assistant conducting a ${session.interviewType || 'mixed'} interview at ${session.difficulty || 'intermediate'} level.
 
@@ -325,30 +522,65 @@ INSTRUCTIONS:
 
 Start by greeting the candidate and asking the first question.`;
 
-      // Start the call with inline assistant config (client-side approach)
-      await vapi.start({
-        model: {
-          provider: "openai",
-          model: "gpt-4o-mini",
-          messages: [
-            {
-              role: "system",
-              content: interviewScript
-            }
-          ]
-        },
-        voice: {
-          provider: "11labs",
-          voiceId: "burt"
-        },
-        name: "Interview Assistant",
-        firstMessage: `Hello! Welcome to your ${session.interviewType || 'mixed'} interview. I'm your AI interview assistant. Are you ready to get started with the first question?`,
-        transcriber: {
-          provider: "deepgram",
-          model: "nova-2",
-          language: "en"
+        // Use VAPI's built-in providers that work with free tier
+        console.log('Starting call with VAPI built-in providers...');
+        try {
+          await vapi.start({
+            model: {
+              provider: "openai",
+              model: "gpt-3.5-turbo",
+              messages: [
+                {
+                  role: "system",
+                  content: interviewScript
+                }
+              ],
+              temperature: 0.7
+            },
+            voice: {
+              provider: "11labs",
+              voiceId: "burt"
+            },
+            transcriber: {
+              provider: "deepgram",
+              model: "nova-2",
+              language: "en"
+            },
+            name: "Interview Assistant",
+            firstMessage: `Hello! Welcome to your ${session.interviewType || 'mixed'} interview. I'm your AI interview assistant. Are you ready to get started with the first question?`,
+            silenceTimeoutSeconds: 120,
+            maxDurationSeconds: (session.interviewDuration || 30) * 60
+          });
+        } catch (startError: any) {
+          console.error('Failed to start with 11labs, trying azure:', startError);
+          // Try with azure voice as alternative
+          await vapi.start({
+            model: {
+              provider: "openai",
+              model: "gpt-3.5-turbo",
+              messages: [
+                {
+                  role: "system",
+                  content: interviewScript
+                }
+              ],
+              temperature: 0.7
+            },
+            voice: {
+              provider: "azure",
+              voiceId: "en-US-JennyNeural"
+            },
+            transcriber: {
+              provider: "deepgram",
+              model: "nova-2",
+              language: "en"
+            },
+            name: "Interview Assistant",
+            firstMessage: `Hello! Welcome to your ${session.interviewType || 'mixed'} interview. I'm your AI interview assistant. Are you ready to get started with the first question?`,
+            silenceTimeoutSeconds: 120,
+            maxDurationSeconds: (session.interviewDuration || 30) * 60
+          });
         }
-      });
       
     } catch (error) {
       console.error('Failed to start call:', error);
@@ -359,18 +591,51 @@ Start by greeting the candidate and asking the first question.`;
   };
 
   const endCall = async () => {
-    if (vapi && isCallActive) {
-      vapi.stop();
-      // The call-end event will handle the rest
+    console.log('endCall called, isCallActive:', isCallActive, 'vapi:', !!vapi);
+    
+    // Always update UI state first
+    setIsCallActive(false);
+    setIsConnecting(false);
+    
+    if (vapi) {
+      try {
+        vapi.stop();
+        console.log('VAPI stop called successfully');
+      } catch (e) {
+        console.error('Error stopping VAPI:', e);
+      }
     }
+    
+    // Always trigger the end flow
+    handleCallEnd();
   };
 
   const toggleMute = () => {
-    if (vapi && isCallActive) {
-      const newMuteState = !isMuted;
-      vapi.setMuted(newMuteState);
-      setIsMuted(newMuteState);
+    if (!vapi) {
+      console.warn('Cannot toggle mute: VAPI not initialized');
+      return;
     }
+    
+    if (!isCallActive) {
+      console.warn('Cannot toggle mute: Call not active');
+      return;
+    }
+    
+    const newMuteState = !isMuted;
+    
+    try {
+      // Try to set muted state on VAPI, but don't fail if call object isn't available
+      if (typeof vapi.setMuted === 'function') {
+        vapi.setMuted(newMuteState);
+      }
+    } catch (error) {
+      // Ignore VAPI errors - call object may not be available
+      console.warn('VAPI setMuted warning (non-critical):', error);
+    }
+    
+    // Always update the UI state
+    setIsMuted(newMuteState);
+    console.log('Mute toggled to:', newMuteState);
   };
 
   const formatDuration = (seconds: number): string => {
@@ -378,6 +643,76 @@ Start by greeting the candidate and asking the first question.`;
     const secs = seconds % 60;
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
+
+  // Feedback generation view
+  if (isGeneratingFeedback) {
+    return (
+      <div className="dashboard-container">
+        <div className="feedback-generation-page">
+          <div className="feedback-gen-card">
+            {/* Animated background */}
+            <div className="feedback-gen-bg">
+              <div className="bg-circle bg-circle-1"></div>
+              <div className="bg-circle bg-circle-2"></div>
+              <div className="bg-circle bg-circle-3"></div>
+            </div>
+            
+            {/* Content */}
+            <div className="feedback-gen-content">
+              {/* Animated icon */}
+              <div className="feedback-gen-icon">
+                <div className="icon-ring icon-ring-outer"></div>
+                <div className="icon-ring icon-ring-middle"></div>
+                <div className="icon-ring icon-ring-inner"></div>
+                <div className="icon-center">
+                  <span className="icon-emoji">🎯</span>
+                </div>
+              </div>
+              
+              {/* Title */}
+              <h1 className="feedback-gen-title">Analyzing Your Interview</h1>
+              
+              {/* Progress status */}
+              <div className="feedback-gen-status">
+                <div className="status-dot"></div>
+                <span className="status-text-animated">{feedbackProgress}</span>
+              </div>
+              
+              {/* Progress bar */}
+              <div className="feedback-gen-progress">
+                <div className="progress-track">
+                  <div className="progress-fill"></div>
+                </div>
+              </div>
+              
+              {/* Description */}
+              <p className="feedback-gen-desc">
+                Our AI is carefully reviewing your responses to provide personalized feedback
+              </p>
+              
+              {/* Steps indicator */}
+              <div className="feedback-gen-steps">
+                <div className={`step ${feedbackProgress.includes('Saving interview') ? 'active' : feedbackProgress.includes('Analyzing') || feedbackProgress.includes('Complete') ? 'completed' : ''}`}>
+                  <div className="step-icon">💾</div>
+                  <span>Saving Data</span>
+                </div>
+                <div className="step-connector"></div>
+                <div className={`step ${feedbackProgress.includes('Analyzing') ? 'active' : feedbackProgress.includes('Saving feedback') || feedbackProgress.includes('Complete') ? 'completed' : ''}`}>
+                  <div className="step-icon">🔍</div>
+                  <span>Analyzing</span>
+                </div>
+                <div className="step-connector"></div>
+                <div className={`step ${feedbackProgress.includes('Saving feedback') ? 'active' : feedbackProgress.includes('Complete') ? 'completed' : ''}`}>
+                  <div className="step-icon">📊</div>
+                  <span>Generating Report</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // Pre-interview view
   if (!isCallActive && !isConnecting) {
@@ -553,7 +888,7 @@ Start by greeting the candidate and asking the first question.`;
             <button 
               onClick={toggleMute}
               className={`control-btn ${isMuted ? 'muted' : ''}`}
-              disabled={!isCallActive}
+              disabled={!isCallActive || !vapi}
               title={isMuted ? 'Unmute' : 'Mute'}
             >
               {isMuted ? '🔇' : '🎤'}
@@ -563,7 +898,6 @@ Start by greeting the candidate and asking the first question.`;
             <button 
               onClick={endCall}
               className="control-btn end-call"
-              disabled={!isCallActive && !isConnecting}
             >
               📞
               <span className="control-label">End Interview</span>
