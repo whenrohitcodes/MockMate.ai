@@ -100,14 +100,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Run both AI calls in parallel to reduce total time
-    const [atsReport, parsedResumeData] = await Promise.all([
-      generateATSReport(extractedResumeText, extractedJobDescriptionText),
-      parseResumeStructure(extractedResumeText).catch(error => {
-        console.error('Resume parse failed, using minimal structure:', error);
-        return { rawText: extractedResumeText };
-      })
-    ]);
+    // Resume parsing is disabled; only generate ATS report.
+    const atsReport = await generateATSReport(extractedResumeText, extractedJobDescriptionText);
+    const parsedResumeData = { rawText: extractedResumeText };
 
     return NextResponse.json({
       success: true,
@@ -224,33 +219,75 @@ async function generateATSReport(resumeText: string, jobDescriptionText: string)
     return buildFallbackAtsReport(resumeText, jobDescriptionText, new Error('Missing OPENROUTER_API_KEY'));
   }
 
-  // Truncate inputs to reduce tokens
-  const truncatedResume = resumeText.substring(0, 3000);
-  const truncatedJD = jobDescriptionText.substring(0, 2000);
-
-  const prompt = `Analyze resume vs job description. Return ONLY valid JSON, no markdown.
+  const prompt = `
+Analyze the following resume against the job description to generate a comprehensive ATS (Applicant Tracking System) report.
 
 RESUME:
-${truncatedResume}
+${resumeText}
 
-JOB:
-${truncatedJD}
+JOB DESCRIPTION:
+${jobDescriptionText}
 
-Return this exact JSON structure (keep feedback short, max 50 words each):
-{"overallScore":75,"matchPercentage":70,"keywordMatches":{"found":["skill1"],"missing":["skill2"]},"sections":{"skills":{"score":75,"feedback":"brief feedback","suggestions":["suggestion"]},"experience":{"score":75,"feedback":"brief feedback","suggestions":["suggestion"]},"education":{"score":75,"feedback":"brief feedback","suggestions":["suggestion"]},"formatting":{"score":75,"feedback":"brief feedback","suggestions":["suggestion"]}},"strengths":["strength1","strength2"],"improvementAreas":["area1"],"recommendations":["rec1","rec2"],"estimatedATSCompatibility":"Medium","summary":"One sentence summary"}`;
+Please provide a detailed ATS analysis in the following JSON format:
+
+{
+  "overallScore": <number 0-100>,
+  "matchPercentage": <number 0-100>,
+  "keywordMatches": {
+    "found": ["keyword1", "keyword2"],
+    "missing": ["keyword3", "keyword4"]
+  },
+  "sections": {
+    "skills": {
+      "score": <number 0-100>,
+      "feedback": "detailed feedback",
+      "suggestions": ["suggestion1", "suggestion2"]
+    },
+    "experience": {
+      "score": <number 0-100>,
+      "feedback": "detailed feedback",
+      "suggestions": ["suggestion1", "suggestion2"]
+    },
+    "education": {
+      "score": <number 0-100>,
+      "feedback": "detailed feedback",
+      "suggestions": ["suggestion1", "suggestion2"]
+    },
+    "formatting": {
+      "score": <number 0-100>,
+      "feedback": "detailed feedback",
+      "suggestions": ["suggestion1", "suggestion2"]
+    }
+  },
+  "strengths": ["strength1", "strength2"],
+  "improvementAreas": ["area1", "area2"],
+  "recommendations": ["recommendation1", "recommendation2"],
+  "estimatedATSCompatibility": "<High/Medium/Low>",
+  "summary": "Overall summary of the resume's performance against this job description"
+}
+
+Focus on:
+1. Keyword matching between resume and job requirements
+2. Skills alignment
+3. Experience relevance
+4. Education requirements
+5. ATS-friendly formatting
+6. Missing critical elements
+7. Actionable improvement suggestions
+`;
 
   let response;
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 45000);
   try {
-    console.log('Calling Nemotron model for ATS report...');
+    console.log('Calling Mistral Small model for ATS report...');
     response = await client.chat.completions.create({
-      model: 'nvidia/nemotron-3-nano-30b-a3b:free',
+      model: 'deepseek/deepseek-chat',
       messages: [{ role: 'user', content: prompt }],
-      temperature: 0.2,
-      max_tokens: 2500,
+      temperature: 0.3,
+      max_tokens: 2000,
     });
-    console.log('Nemotron ATS response received');
+    console.log('Mistral Small ATS response received');
   } catch (error) {
     console.error('OpenRouter completion failed:', error);
     return buildFallbackAtsReport(resumeText, jobDescriptionText, error);
@@ -341,35 +378,90 @@ function attemptJsonRepair(jsonStr: string): string {
   return result;
 }
 
+/*
 async function parseResumeStructure(resumeText: string) {
   const client = getOpenAIClient();
   if (!client) {
     return { rawText: resumeText, error: 'Missing OPENROUTER_API_KEY' };
   }
 
-  // Truncate resume to reduce processing time
-  const truncatedResume = resumeText.substring(0, 4000);
-
-  const prompt = `Parse this resume into JSON. Return ONLY valid JSON, no markdown.
+  const prompt = `
+Parse the following resume and extract structured information in JSON format:
 
 RESUME:
-${truncatedResume}
+${resumeText}
 
-Return this exact structure (use null/empty arrays for missing info):
-{"personalInfo":{"name":"","email":"","phone":"","location":"","linkedIn":null,"portfolio":null},"summary":"","skills":{"technical":[],"soft":[],"tools":[]},"experience":[{"title":"","company":"","duration":"","responsibilities":[]}],"education":[{"degree":"","institution":"","year":""}],"projects":[{"name":"","description":"","technologies":[]}],"certifications":[]}`;
+Please extract and structure the information in the following JSON format:
+
+{
+  "personalInfo": {
+    "name": "Full Name",
+    "email": "email@example.com",
+    "phone": "phone number",
+    "location": "city, state/country",
+    "linkedIn": "linkedin profile",
+    "portfolio": "portfolio/website url"
+  },
+  "summary": "Professional summary or objective",
+  "skills": {
+    "technical": ["skill1", "skill2"],
+    "soft": ["skill1", "skill2"],
+    "tools": ["tool1", "tool2"],
+    "languages": ["language1", "language2"]
+  },
+  "experience": [
+    {
+      "title": "Job Title",
+      "company": "Company Name",
+      "duration": "Start Date - End Date",
+      "location": "Location",
+      "responsibilities": ["responsibility1", "responsibility2"],
+      "achievements": ["achievement1", "achievement2"]
+    }
+  ],
+  "education": [
+    {
+      "degree": "Degree Type",
+      "institution": "Institution Name",
+      "year": "Graduation Year",
+      "gpa": "GPA if mentioned",
+      "relevantCourses": ["course1", "course2"]
+    }
+  ],
+  "projects": [
+    {
+      "name": "Project Name",
+      "description": "Project Description",
+      "technologies": ["tech1", "tech2"],
+      "url": "project url if available"
+    }
+  ],
+  "certifications": [
+    {
+      "name": "Certification Name",
+      "issuer": "Issuing Organization",
+      "date": "Date Obtained"
+    }
+  ],
+  "awards": ["award1", "award2"],
+  "publications": ["publication1", "publication2"]
+}
+
+If any section is not found in the resume, use empty arrays or null values appropriately.
+`;
 
   let response;
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 30000);
   try {
-    console.log('Calling Nemotron model for resume parsing...');
+    console.log('Calling Mistral Small model for resume parsing...');
     response = await client.chat.completions.create({
-      model: 'nvidia/nemotron-3-nano-30b-a3b:free',
+      model: 'deepseek/deepseek-chat',
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.2,
-      max_tokens: 2500,
+      max_tokens: 1500,
     });
-    console.log('Nemotron resume parse response received');
+    console.log('Mistral Small resume parse response received');
   } catch (error) {
     clearTimeout(timeout);
     console.error('OpenRouter resume parse failed:', error);
@@ -443,6 +535,7 @@ Return this exact structure (use null/empty arrays for missing info):
     };
   }
 }
+*/
 
 function buildFallbackAtsReport(resumeText: string, jobDescriptionText: string, error: unknown) {
   return {
