@@ -548,7 +548,7 @@ Start by greeting the candidate and asking the first question.`;
             },
             name: "Interview Assistant",
             firstMessage: `Hello! Welcome to your ${session.interviewType || 'mixed'} interview. I'm your AI interview assistant. Are you ready to get started with the first question?`,
-            silenceTimeoutSeconds: 120,
+            // silenceTimeoutSeconds: 120,
             maxDurationSeconds: (session.interviewDuration || 30) * 60
           });
         } catch (startError: any) {
@@ -577,7 +577,7 @@ Start by greeting the candidate and asking the first question.`;
             },
             name: "Interview Assistant",
             firstMessage: `Hello! Welcome to your ${session.interviewType || 'mixed'} interview. I'm your AI interview assistant. Are you ready to get started with the first question?`,
-            silenceTimeoutSeconds: 120,
+            // silenceTimeoutSeconds: 120,
             maxDurationSeconds: (session.interviewDuration || 30) * 60
           });
         }

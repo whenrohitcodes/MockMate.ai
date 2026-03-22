@@ -196,7 +196,7 @@ Please provide comprehensive feedback to help this candidate improve their inter
 
     console.log('Calling Nemotron model via OpenRouter...');
     const response = await openai.chat.completions.create({
-      model: 'nvidia/nemotron-3-nano-30b-a3b:free',
+      model: 'deepseek/deepseek-chat',
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt }

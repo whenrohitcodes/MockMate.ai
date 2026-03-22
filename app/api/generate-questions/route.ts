@@ -154,7 +154,7 @@ Focus on creating questions that will help evaluate the candidate's fit for this
   try {
     console.log('Calling Nemotron model for question generation...');
     const response = await client.chat.completions.create({
-      model: 'nvidia/nemotron-3-nano-30b-a3b:free',
+      model: 'deepseek/deepseek-chat',
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.7,
       max_tokens: 2000,
